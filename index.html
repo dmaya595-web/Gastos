@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Gastos de Casa</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Gastos">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F2F5F3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101816" media="(prefers-color-scheme: dark)">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: libreta familiar de una columna en celular; en escritorio, captura a la izquierda y resumen a la derecha. Cada persona tiene su color en toda la app. */
+:root{
+  --bg:#F2F5F3; --surface:#FFFFFF; --soft:#E6EDEA; --ink:#14211D; --muted:#5C6B66; --line:#D5DDD9;
+  --accent:#0B6E5B; --accent-ink:#FFFFFF; --pa:#C9741A; --pb:#4457C0; --bad:#B3261E; --warn:#8F5B00;
+  --display:"Bricolage Grotesque","Figtree",system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#101816; --surface:#18221F; --soft:#212D29; --ink:#E8EFEC; --muted:#9AAAA4; --line:#2C3A35;
+  --accent:#3FBF9F; --accent-ink:#06231C; --pa:#F0A040; --pb:#8C9BF2; --bad:#F2857C; --warn:#E5B04A; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#101816; --surface:#18221F; --soft:#212D29; --ink:#E8EFEC; --muted:#9AAAA4; --line:#2C3A35;
+  --accent:#3FBF9F; --accent-ink:#06231C; --pa:#F0A040; --pb:#8C9BF2; --bad:#F2857C; --warn:#E5B04A; color-scheme:dark }
+
+*{box-sizing:border-box}
+html{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+img{max-width:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+
+.wrap{max-width:1040px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding-block:12px 0}
+.brand{font-family:var(--display);font-weight:700;font-size:1.25rem;letter-spacing:-.01em;margin-right:auto}
+.who{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-weight:600;font-size:.9rem}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex:none;display:inline-block}
+.dot.a{background:var(--pa)} .dot.b{background:var(--pb)}
+.month{display:flex;align-items:center;gap:4px}
+.month button{border:1px solid var(--line);background:var(--surface);border-radius:8px;width:36px;height:36px;font-size:1.1rem;line-height:1}
+.month span{min-width:9.5em;text-align:center;font-weight:600;text-transform:capitalize}
+nav.tabs{display:flex;gap:4px;width:100%;overflow-x:auto}
+nav.tabs button{border:0;background:none;padding:10px 12px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+
+main{padding-block:20px 48px}
+h2{font-family:var(--display);font-weight:700;font-size:1.15rem;margin:0 0 12px;text-wrap:balance}
+.label{font-size:.75rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.grid2{display:grid;gap:20px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){ .grid2{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);align-items:start} }
+.stack{display:flex;flex-direction:column;gap:20px;min-width:0}
+.aviso{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:16px;color:var(--ink)}
+.muted{color:var(--muted)}
+
+/* formulario */
+form.gasto{display:flex;flex-direction:column;gap:16px}
+.monto{display:flex;align-items:baseline;gap:6px;border-bottom:2px solid var(--ink);padding-bottom:4px}
+.monto span{font-family:var(--display);font-size:2rem;color:var(--muted)}
+.monto input{border:0;background:none;width:100%;min-width:0;font-family:var(--display);font-weight:700;font-size:2.6rem;font-variant-numeric:tabular-nums;padding:0}
+.monto input:focus{outline:none}
+.monto:focus-within{border-bottom-color:var(--accent)}
+.campo{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fila{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.campo input,.campo select{border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:10px 12px;width:100%;min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+.chip span{display:block;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 13px;font-size:.92rem;font-weight:500}
+.chip input:checked + span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.chip input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+.favb{border:1px solid var(--accent);background:var(--surface);color:var(--accent);border-radius:999px;padding:7px 13px;font-size:.92rem;font-weight:600}
+.tag{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:4px 4px 4px 12px;font-size:.92rem}
+.tag button,.adm .x{border:0;background:none;color:var(--muted);font-size:1.15rem;line-height:1;width:30px;height:30px;border-radius:50%}
+.tag button:hover,.adm .x:hover{color:var(--bad)}
+.adm{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.adm:first-child{border-top:0}
+.adm span{overflow-wrap:anywhere}
+.star{border:0;background:none;font-size:1.3rem;line-height:1;width:34px;height:34px;color:var(--muted)}
+.star.on{color:var(--pa)}
+.check{display:flex;align-items:center;gap:8px}
+.check input{width:18px;height:18px;accent-color:var(--accent)}
+.btn{border:0;border-radius:10px;padding:12px 18px;font-weight:700;background:var(--accent);color:var(--accent-ink)}
+.btn.sec{background:var(--soft);color:var(--ink);font-weight:600}
+.btn.peligro{background:none;color:var(--bad);border:1px solid var(--bad);font-weight:600}
+.btn:disabled{opacity:.55;cursor:default}
+.acciones{display:flex;flex-wrap:wrap;gap:10px}
+
+/* resumen y barras */
+.total{font-family:var(--display);font-weight:700;font-size:2.2rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.bar{display:flex;height:10px;border-radius:999px;background:var(--soft);overflow:hidden}
+.bar i{display:block;height:100%}
+.bar .pa{background:var(--pa)} .bar .pb{background:var(--pb)} .bar .ok{background:var(--accent)} .bar .over{background:var(--bad)}
+.personas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.personas div{min-width:0}
+.personas b{display:block;font-size:1.15rem;font-variant-numeric:tabular-nums}
+.pname{display:flex;align-items:center;gap:6px;font-size:.9rem;color:var(--muted);overflow-wrap:anywhere}
+.cat{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline;padding:9px 0;border-top:1px solid var(--line)}
+.cat:first-of-type{border-top:0}
+.cat .bar{grid-column:1/-1;height:8px}
+.cat small{color:var(--muted)}
+.dias{display:flex;align-items:flex-end;gap:2px;height:120px;border-bottom:1px solid var(--line)}
+.dias div{flex:1;min-width:0;background:var(--accent);border-radius:3px 3px 0 0;min-height:0}
+.dias div.hoy{background:var(--ink)}
+.ejes{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);margin-top:4px}
+.estado{font-weight:600}
+.estado.over{color:var(--bad)} .estado.warn{color:var(--warn)}
+
+/* lista */
+.filtros{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.filtros select{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px}
+.dia{margin-top:18px}
+.dia:first-child{margin-top:0}
+.dia-h{display:flex;justify-content:space-between;gap:12px;padding-bottom:6px;border-bottom:1px solid var(--line);text-transform:capitalize}
+.mov{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 10px;align-items:center;width:100%;text-align:left;border:0;background:none;padding:10px 0;border-bottom:1px solid var(--line)}
+.mov .dot{grid-row:1/3}
+.mov .t{font-weight:600;overflow-wrap:anywhere}
+.mov .m{font-weight:700;font-variant-numeric:tabular-nums}
+.mov .s{grid-column:2/4;font-size:.86rem;color:var(--muted);overflow-wrap:anywhere}
+.mov:hover .t{text-decoration:underline}
+.vacio{padding:22px 4px;color:var(--muted)}
+
+dialog{border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--ink);padding:20px;width:min(560px,calc(100vw - 32px));max-height:calc(100dvh - 32px)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;z-index:20;max-width:calc(100vw - 32px);text-align:center}
+.gate{max-width:520px;margin:24px auto 0}
+.gate .btn{width:100%}
+.pick{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.pick button{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:18px;font-weight:700;font-size:1.05rem;display:flex;align-items:center;gap:10px;justify-content:center;overflow-wrap:anywhere}
+@media (prefers-reduced-motion:no-preference){ .bar i,.dias div{transition:width .3s,height .3s} }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">Gastos de Casa</div>
+    <button class="who" id="quienBtn" type="button" hidden></button>
+    <div class="month" id="mesNav" hidden>
+      <button type="button" id="mesPrev" aria-label="Mes anterior">‹</button>
+      <span id="mesLabel"></span>
+      <button type="button" id="mesNext" aria-label="Mes siguiente">›</button>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist" hidden>
+      <button type="button" role="tab" data-tab="registrar">Registrar</button>
+      <button type="button" role="tab" data-tab="movimientos">Movimientos</button>
+      <button type="button" role="tab" data-tab="reporte">Reporte</button>
+      <button type="button" role="tab" data-tab="ajustes">Ajustes</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="aviso" id="aviso" hidden></div>
+
+  <section id="cargando" class="gate panel">
+    <h2>Abriendo la libreta…</h2>
+    <p class="muted">Aquí aparecerán los gastos de la familia: cada quien registra los suyos y al final del mes se arma el reporte.</p>
+  </section>
+
+  <section id="login" class="gate panel" hidden>
+    <h2>Entrar a la libreta</h2>
+    <p class="muted">Usa el correo y la contraseña que dieron de alta en Firebase.</p>
+    <form id="loginForm" class="gasto">
+      <label class="campo"><span class="label">Correo</span><input id="login-correo" type="email" required autocomplete="username" autocapitalize="none"></label>
+      <label class="campo"><span class="label">Contraseña</span><input id="login-clave" type="password" required autocomplete="current-password"></label>
+      <button class="btn" type="submit" id="login-btn">Entrar</button>
+    </form>
+  </section>
+
+  <section id="alta" class="gate panel" hidden>
+    <h2>Configuren su libreta</h2>
+    <p class="muted">Solo se hace una vez. Los nombres sirven para saber quién registró cada gasto.</p>
+    <form id="altaForm" class="gasto">
+      <label class="campo"><span class="label">Tu nombre</span><input id="alta-a" value="Daniel" required maxlength="30" autocomplete="off"></label>
+      <label class="campo"><span class="label">Nombre de tu pareja</span><input id="alta-b" value="Merlina" required maxlength="30" autocomplete="off"></label>
+      <label class="campo"><span class="label">Presupuesto mensual en pesos (opcional)</span><input id="alta-p" value="70000" inputmode="decimal" placeholder="Ej. 25000" autocomplete="off"></label>
+      <button class="btn" type="submit">Empezar</button>
+    </form>
+  </section>
+
+  <section id="elegir" class="gate panel" hidden>
+    <h2>¿Quién usa este dispositivo?</h2>
+    <p class="muted">Los gastos que registres aquí quedarán a tu nombre. Puedes cambiarlo después.</p>
+    <div class="pick" id="elegirBtns"></div>
+  </section>
+
+  <section id="v-registrar" hidden>
+    <div class="grid2">
+      <div class="panel">
+        <h2>Nuevo gasto</h2>
+        <form id="nuevoForm" class="gasto" novalidate></form>
+      </div>
+      <div class="stack">
+        <div class="panel" id="miniResumen"></div>
+        <div class="panel"><h2>Registrados hoy</h2><div id="hoyLista"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="v-movimientos" hidden>
+    <div class="filtros" id="filtrosMov"></div>
+    <div class="panel" id="movLista"></div>
+  </section>
+
+  <section id="v-reporte" hidden>
+    <div class="filtros" id="filtrosRep"></div>
+    <div class="grid2">
+      <div class="stack">
+        <div class="panel" id="repTotal"></div>
+        <div class="panel" id="repDias"></div>
+        <div class="panel" id="repTipos"></div>
+        <div class="panel" id="repMetodos"></div>
+      </div>
+      <div class="stack">
+        <div class="panel" id="repCats"></div>
+        <div class="panel">
+          <h2>Reporte de fin de mes</h2>
+          <p class="muted" id="expTexto">Descarga todos los gastos del mes en un archivo de Excel, con una hoja de resumen por persona y por categoría.</p>
+          <button class="btn" type="button" id="expBtn">Exportar a Excel</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="v-ajustes" hidden>
+    <div class="grid2">
+      <div class="panel">
+        <h2>Familia y presupuesto</h2>
+        <form id="ajForm" class="gasto">
+          <label class="campo"><span class="label"><span class="dot a"></span> Persona 1</span><input id="aj-a" required maxlength="30" autocomplete="off"></label>
+          <label class="campo"><span class="label"><span class="dot b"></span> Persona 2</span><input id="aj-b" required maxlength="30" autocomplete="off"></label>
+          <label class="campo"><span class="label">Presupuesto mensual en pesos</span><input id="aj-p" inputmode="decimal" placeholder="Sin presupuesto" autocomplete="off"></label>
+          <div class="acciones"><button class="btn" type="submit">Guardar ajustes</button></div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Este dispositivo</h2>
+        <p class="muted" id="ajQuien"></p>
+        <div class="acciones"><button class="btn sec" type="button" id="cambiarBtn">Cambiar de persona</button><button class="btn sec" type="button" id="salirBtn">Cerrar sesión</button></div>
+        <p class="muted" id="ajCorreo" style="margin-bottom:0"></p>
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:20px">
+      <div class="panel">
+        <h2>Lugares frecuentes y favoritos</h2>
+        <p class="muted" style="margin-top:0">Cada lugar recuerda su categoría y si es de casa, personal o trabajo. Los marcados con ★ aparecen como botones al registrar.</p>
+        <div id="admLugares"></div>
+        <form id="lugForm" class="gasto" style="margin-top:16px">
+          <label class="campo"><span class="label">Nuevo lugar</span><input id="lug-nombre" maxlength="60" placeholder="Ej. Costco, Netflix" autocomplete="off"></label>
+          <div class="fila">
+            <label class="campo"><span class="label">Categoría</span><select id="lug-cat"></select></label>
+            <label class="campo"><span class="label">Gasto de</span><select id="lug-tipo"><option>Casa</option><option>Personal</option><option>Trabajo</option></select></label>
+          </div>
+          <label class="check"><input type="checkbox" id="lug-fav" checked> Mostrar en favoritos</label>
+          <div class="acciones"><button class="btn" type="submit">Agregar lugar</button></div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Categorías</h2>
+        <div class="chips" id="admCats"></div>
+        <form id="catForm" class="gasto" style="margin-top:16px">
+          <label class="campo"><span class="label">Nueva categoría</span><input id="cat-nueva" maxlength="30" placeholder="Ej. Colegiaturas" autocomplete="off"></label>
+          <div class="acciones"><button class="btn" type="submit">Agregar categoría</button></div>
+        </form>
+      </div>
+    </div>
+  </section>
+  <datalist id="lugaresDL"></datalist>
+</main>
+
+<dialog id="dlg" aria-labelledby="dlgT">
+  <h2 id="dlgT">Editar gasto</h2>
+  <form id="editForm" class="gasto" novalidate></form>
+</dialog>
+<div id="toast" role="status" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+(function(){
+"use strict";
+var firebaseConfig={
+  apiKey:"AIzaSyCYgyJKXR2_ao9k4pLd4TGbYCYJIDZstAE",
+  authDomain:"gastos-de-casa-23f14.firebaseapp.com",
+  projectId:"gastos-de-casa-23f14",
+  storageBucket:"gastos-de-casa-23f14.firebasestorage.app",
+  messagingSenderId:"547821801489",
+  appId:"1:547821801489:web:57467eb380e403e705e1b0"
+};
+var DEF_LUGARES=[
+  {id:"l1",nombre:"Villa de Patos",categoria:"Súper",tipo:"Casa",fav:true},
+  {id:"l2",nombre:"Tag",categoria:"Transporte",tipo:"Casa",fav:true},
+  {id:"l3",nombre:"Gasolina",categoria:"Transporte",tipo:"Casa",fav:true},
+  {id:"l4",nombre:"Uber Eats",categoria:"Delivery",tipo:"Casa",fav:true},
+  {id:"l5",nombre:"Rappi",categoria:"Delivery",tipo:"Casa",fav:true},
+  {id:"l6",nombre:"HBO",categoria:"Suscripción",tipo:"Personal",fav:true},
+  {id:"l7",nombre:"Claude",categoria:"Suscripción",tipo:"Trabajo",fav:true}
+];
+var DEF_CATS=["Súper","Delivery","Restaurantes","Transporte","Suscripción","Casa y servicios","Salud","Farmacia","Entretenimiento","Ropa","Cuidado personal","Educación","Mascotas","Regalos","Viajes","Otros"];
+var TIPOS=["Casa","Personal","Trabajo"];
+function cats(){return (S.cat&&S.cat.categorias&&S.cat.categorias.length)?S.cat.categorias:DEF_CATS}
+function lugares(){return S.cat?(S.cat.lugares||[]):DEF_LUGARES}
+function catsDe(l){var r=cats().slice();l.forEach(function(g){if(r.indexOf(g.categoria)<0)r.push(g.categoria)});return r}
+var METS=["Efectivo","Tarjeta de débito","Tarjeta de crédito","Transferencia"];
+var $=function(id){return document.getElementById(id)};
+var money=new Intl.NumberFormat("es-MX",{style:"currency",currency:"MXN"});
+function fmt(n){return money.format(n||0)}
+function p2(n){return (n<10?"0":"")+n}
+function hoy(){var d=new Date();return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate())}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function parseMonto(v){var n=parseFloat(String(v).replace(/[$\s,]/g,""));return isFinite(n)?Math.round(n*100)/100:NaN}
+function fechaObj(f){var p=f.split("-");return new Date(+p[0],+p[1]-1,+p[2])}
+function fechaLarga(f){return fechaObj(f).toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"})}
+function mesLargo(m){return fechaObj(m+"-01").toLocaleDateString("es-MX",{month:"long",year:"numeric"})}
+function diasDelMes(m){var p=m.split("-");return new Date(+p[0],+p[1],0).getDate()}
+function moverMes(m,d){var p=m.split("-");var x=new Date(+p[0],+p[1]-1+d,1);return x.getFullYear()+"-"+p2(x.getMonth()+1)}
+function leer(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function guardarLocal(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}
+
+var S={mes:hoy().slice(0,7),tab:"registrar",filtro:"todos",fcat:"",gastos:[],gastosListos:false,cfg:null,cfgLista:false,cat:null,catVer:0,pintado:-1,yo:leer("quien"),editId:null,ocupado:false};
+var db=null,auth=null,usuario=null,authLista=false,unsubGastos=null,unsubCfg=null,unsubCat=null,timer=null;
+
+function persona(id){var ps=(S.cfg&&S.cfg.personas)||[];for(var i=0;i<ps.length;i++)if(ps[i].id===id)return ps[i];return null}
+function nombre(id){var p=persona(id);return p?p.nombre:"Alguien"}
+function dot(id){return '<span class="dot '+(id==="a"||id==="b"?id:"")+'"></span>'}
+
+var toastT=null;
+function toast(msg){var t=$("toast");t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(function(){t.hidden=true},3200)}
+function aviso(msg){var a=$("aviso");if(msg){a.textContent=msg;a.hidden=false}else a.hidden=true}
+function errorEscritura(e){
+  var c=e&&e.code;
+  if(c==="resource-exhausted")toast("Se alcanzó el límite gratuito de hoy. Inténtalo mañana.");
+  else if(c==="permission-denied"||c==="unauthenticated")toast("No se pudo guardar. Tu correo no tiene permiso en las reglas de Firebase.");
+  else toast("No se pudo guardar. Revisa tu conexión e inténtalo de nuevo.");
+}
+
+/* ---------- campos del formulario (nuevo y editar) ---------- */
+function campos(px,conQuien){
+  var h='<div class="campo"><label class="label" for="'+px+'-monto">Monto</label><div class="monto"><span>$</span><input id="'+px+'-monto" inputmode="decimal" placeholder="0.00" autocomplete="off"></div></div>';
+  h+='<div class="campo"><span class="label" id="'+px+'-catl">Categoría</span><div class="chips" id="'+px+'-cats" role="radiogroup" aria-labelledby="'+px+'-catl"></div></div>';
+  h+='<div class="campo"><span class="label" id="'+px+'-tipol">Gasto de</span><div class="chips" role="radiogroup" aria-labelledby="'+px+'-tipol">';
+  TIPOS.forEach(function(t,i){h+='<label class="chip"><input type="radio" name="'+px+'-tipo" id="'+px+'-tipo-'+i+'" value="'+t+'"'+(i===0?" checked":"")+'><span>'+t+'</span></label>'});
+  h+='</div></div><div class="fila">';
+  h+='<label class="campo"><span class="label">Fecha</span><input type="date" id="'+px+'-fecha"></label>';
+  h+='<label class="campo"><span class="label">Método de pago</span><select id="'+px+'-met">'+METS.map(function(m){return "<option>"+esc(m)+"</option>"}).join("")+'</select></label>';
+  if(conQuien)h+='<label class="campo"><span class="label">Quién pagó</span><select id="'+px+'-quien"></select></label>';
+  h+='</div><div class="fila">';
+  h+='<label class="campo"><span class="label">Lugar o comercio</span><input id="'+px+'-lugar" list="lugaresDL" maxlength="60" placeholder="Ej. Mercado, gasolinera" autocomplete="off"></label>';
+  h+='<label class="campo"><span class="label">Nota</span><input id="'+px+'-nota" maxlength="140" placeholder="Opcional" autocomplete="off"></label>';
+  h+='</div>';
+  return h;
+}
+function leerCampos(px){
+  var cat=document.querySelector('input[name="'+px+'-cat"]:checked');
+  var tp=document.querySelector('input[name="'+px+'-tipo"]:checked');
+  return {monto:parseMonto($(px+"-monto").value),fecha:$(px+"-fecha").value,categoria:cat?cat.value:"Otros",tipo:tp?tp.value:"Casa",metodo:$(px+"-met").value,lugar:$(px+"-lugar").value.trim(),nota:$(px+"-nota").value.trim()};
+}
+function validar(d){
+  if(!(d.monto>0)){toast("Escribe un monto mayor a cero.");return false}
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d.fecha)){toast("Elige la fecha del gasto.");return false}
+  return true;
+}
+
+function pintarCats(px,sel){
+  var box=$(px+"-cats"),act=sel||(box.querySelector("input:checked")||{}).value,l=cats().slice();
+  if(act&&l.indexOf(act)<0)l.push(act);
+  if(!act)act=l[0];
+  box.innerHTML=l.map(function(c){return '<label class="chip"><input type="radio" name="'+px+'-cat" value="'+esc(c)+'"'+(c===act?" checked":"")+'><span>'+esc(c)+'</span></label>'}).join("");
+}
+function marcarTipo(px,t){Array.prototype.forEach.call(document.querySelectorAll('input[name="'+px+'-tipo"]'),function(x){x.checked=x.value===(TIPOS.indexOf(t)<0?"Casa":t)})}
+function pintarFavs(){
+  var f=lugares().filter(function(l){return l.fav});
+  $("n-favbox").hidden=!f.length;
+  $("n-favs").innerHTML=f.map(function(l){return '<button type="button" class="favb" data-lugar="'+esc(l.id)+'">★ '+esc(l.nombre)+'</button>'}).join("");
+  $("lugaresDL").innerHTML=lugares().map(function(l){return '<option value="'+esc(l.nombre)+'"></option>'}).join("");
+}
+function aplicarLugar(l,enfocar){$("n-lugar").value=l.nombre;pintarCats("n",l.categoria);marcarTipo("n",l.tipo);if(enfocar)$("n-monto").focus()}
+
+$("nuevoForm").innerHTML='<div class="campo" id="n-favbox" hidden><span class="label">Favoritos</span><div class="chips" id="n-favs"></div></div>'+campos("n",false)+'<button class="btn" type="submit" id="n-guardar">Guardar gasto</button>';
+$("n-fecha").value=hoy();
+$("editForm").innerHTML=campos("e",true)+'<div class="acciones"><button class="btn" type="submit">Guardar cambios</button><button class="btn sec" type="button" id="e-cancelar">Cancelar</button><button class="btn peligro" type="button" id="e-borrar">Eliminar</button></div>';
+
+/* ---------- datos ---------- */
+function suscribirGastos(){
+  if(!db)return;
+  if(unsubGastos){unsubGastos();unsubGastos=null}
+  S.gastos=[];S.gastosListos=false;
+  clearTimeout(timer);
+  timer=setTimeout(function(){aviso("Todavía no se puede conectar con la libreta. Lo que ves puede no estar al día.")},10000);
+  unsubGastos=db.collection("gastos").where("mes","==",S.mes).onSnapshot(function(snap){
+    S.gastos=snap.docs.map(function(d){var x=d.data()||{};return {id:d.id,monto:+x.monto||0,fecha:String(x.fecha||""),mes:x.mes,categoria:String(x.categoria||"Otros"),tipo:String(x.tipo||"Casa"),metodo:String(x.metodo||""),lugar:String(x.lugar||""),nota:String(x.nota||""),quien:String(x.quien||""),creado:+x.creado||0}});
+    S.gastos.sort(function(a,b){return a.fecha<b.fecha?1:a.fecha>b.fecha?-1:b.creado-a.creado});
+    if(!snap.metadata.fromCache){S.gastosListos=true;clearTimeout(timer);aviso("")}
+    render();
+  },function(e){clearTimeout(timer);S.gastosListos=true;aviso(e&&e.code==="permission-denied"?"Tu correo no tiene acceso a esta libreta. Revisa las reglas de seguridad en Firebase.":"Se perdió el acceso a los datos. Vuelve a abrir la app más tarde.");render()});
+}
+function iniciarDatos(){
+  unsubCfg=db.doc("config/familia").onSnapshot(function(snap){
+    if(snap.exists){S.cfg=snap.data();S.cfgLista=true}
+    else if(!snap.metadata.fromCache){S.cfg=null;S.cfgLista=true}
+    render();
+  },function(){S.cfgLista=true;render()});
+  unsubCat=db.doc("config/catalogo").onSnapshot(function(snap){
+    if(snap.exists)S.cat=snap.data();else if(!snap.metadata.fromCache)S.cat=null;
+    S.catVer++;render();
+  },function(){});
+  suscribirGastos();
+}
+
+/* ---------- render ---------- */
+function mostrar(ids){["login","cargando","alta","elegir","v-registrar","v-movimientos","v-reporte","v-ajustes"].forEach(function(id){$(id).hidden=ids.indexOf(id)<0})}
+function chrome(on){$("tabs").hidden=!on;$("mesNav").hidden=!on;$("quienBtn").hidden=!on}
+
+function render(){
+  if(!authLista){mostrar(["cargando"]);chrome(false);return}
+  if(!usuario){mostrar(["login"]);chrome(false);return}
+  if(!S.cfgLista){mostrar(["cargando"]);chrome(false);return}
+  if(!S.cfg||!S.cfg.personas||S.cfg.personas.length<2){mostrar(["alta"]);chrome(false);return}
+  if(!persona(S.yo)){
+    mostrar(["elegir"]);chrome(false);
+    $("elegirBtns").innerHTML=S.cfg.personas.map(function(p){return '<button type="button" data-yo="'+esc(p.id)+'">'+dot(p.id)+esc(p.nombre)+'</button>'}).join("");
+    return;
+  }
+  chrome(true);mostrar(["v-"+S.tab]);
+  $("quienBtn").innerHTML=dot(S.yo)+esc(nombre(S.yo));
+  $("mesLabel").textContent=mesLargo(S.mes);
+  Array.prototype.forEach.call($("tabs").children,function(b){b.setAttribute("aria-selected",b.dataset.tab===S.tab?"true":"false")});
+  if(S.tab==="registrar")renderRegistrar();
+  if(S.tab==="movimientos")renderMov();
+  if(S.tab==="reporte")renderReporte();
+  if(S.tab==="ajustes")renderAjustes();
+}
+
+function sumar(arr){return arr.reduce(function(s,g){return s+g.monto},0)}
+function filtrados(){return S.gastos.filter(function(g){return (S.filtro==="todos"||g.quien===S.filtro)&&(!S.fcat||g.categoria===S.fcat)})}
+function barraPersonas(a,b,max){max=max||1;return '<div class="bar"><i class="pa" style="width:'+(a/max*100).toFixed(2)+'%"></i><i class="pb" style="width:'+(b/max*100).toFixed(2)+'%"></i></div>'}
+
+function presupuestoHTML(total){
+  var p=+(S.cfg&&S.cfg.presupuesto)||0;
+  if(!p)return '<p class="muted" style="margin:12px 0 0">Sin presupuesto mensual. Pueden definirlo en Ajustes.</p>';
+  var pct=total/p,resto=p-total,cls=pct>1?"over":pct>.85?"warn":"";
+  var h='<div style="margin-top:14px"><div class="label" style="margin-bottom:6px">Presupuesto de '+fmt(p)+'</div><div class="bar"><i class="'+(pct>1?"over":"ok")+'" style="width:'+Math.min(100,pct*100).toFixed(1)+'%"></i></div>';
+  h+='<p class="estado '+cls+'" style="margin:8px 0 0">'+(resto>=0?"Quedan "+fmt(resto)+" ("+Math.round(pct*100)+"% usado)":"Se pasaron por "+fmt(-resto))+'</p>';
+  if(S.mes===hoy().slice(0,7)&&resto>0){var quedan=diasDelMes(S.mes)-new Date().getDate()+1;h+='<p class="muted" style="margin:2px 0 0">Alcanza para '+fmt(resto/quedan)+' por día en los '+quedan+' días que quedan.</p>'}
+  return h+'</div>';
+}
+function totalHTML(lista,titulo){
+  var t=sumar(lista),a=sumar(lista.filter(function(g){return g.quien==="a"})),b=sumar(lista.filter(function(g){return g.quien==="b"}));
+  var h='<div class="label">'+esc(titulo)+'</div><div class="total">'+fmt(t)+'</div>';
+  h+='<div style="margin-top:12px">'+barraPersonas(a,b,t)+'</div><div class="personas">';
+  ["a","b"].forEach(function(id){var v=id==="a"?a:b;h+='<div><span class="pname">'+dot(id)+esc(nombre(id))+'</span><b>'+fmt(v)+'</b><span class="muted num">'+(t?Math.round(v/t*100):0)+'%</span></div>'});
+  return h+'</div>';
+}
+function filaMov(g){
+  var sub=[nombre(g.quien),g.tipo,g.metodo];if(g.lugar&&g.nota)sub.push(g.nota);
+  return '<button type="button" class="mov" data-id="'+esc(g.id)+'">'+dot(g.quien)+'<span class="t">'+esc(g.lugar||g.nota||g.categoria)+'</span><span class="m">'+fmt(g.monto)+'</span><span class="s">'+esc((g.lugar||g.nota?g.categoria+" · ":"")+sub.filter(Boolean).join(" · "))+'</span></button>';
+}
+function vacio(txt){return '<p class="vacio">'+(S.gastosListos?esc(txt):"Cargando gastos…")+'</p>'}
+
+function renderRegistrar(){
+  if(S.pintado!==S.catVer){S.pintado=S.catVer;pintarCats("n");pintarFavs()}
+  $("miniResumen").innerHTML=totalHTML(S.gastos,"Gastado en "+mesLargo(S.mes))+presupuestoHTML(sumar(S.gastos));
+  var h=hoy(),l=S.gastos.filter(function(g){return g.fecha===h});
+  $("hoyLista").innerHTML=l.length?l.map(filaMov).join("")+'<p class="muted num" style="margin:10px 0 0">Total de hoy: '+fmt(sumar(l))+'</p>':vacio(S.mes===h.slice(0,7)?"Aún no hay gastos hoy. Registra el primero con el formulario.":"Estás viendo otro mes. Los gastos de hoy aparecen en el mes actual.");
+}
+function filtrosHTML(conCat){
+  var h='<label class="chip"><input type="radio" name="f-'+conCat+'" value="todos"'+(S.filtro==="todos"?" checked":"")+'><span>Todos</span></label>';
+  S.cfg.personas.forEach(function(p){h+='<label class="chip"><input type="radio" name="f-'+conCat+'" value="'+esc(p.id)+'"'+(S.filtro===p.id?" checked":"")+'><span>'+esc(p.nombre)+'</span></label>'});
+  if(conCat)h+='<select id="fcat" aria-label="Filtrar por categoría"><option value="">Todas las categorías</option>'+catsDe(S.gastos).map(function(c){return '<option'+(S.fcat===c?" selected":"")+'>'+esc(c)+'</option>'}).join("")+'</select>';
+  return h;
+}
+function renderMov(){
+  $("filtrosMov").innerHTML=filtrosHTML(1);
+  var l=filtrados();
+  if(!l.length){$("movLista").innerHTML=vacio("No hay gastos con estos filtros en "+mesLargo(S.mes)+".");return}
+  var h="",f="";
+  l.forEach(function(g,i){
+    if(g.fecha!==f){if(f)h+="</div>";f=g.fecha;var td=sumar(l.filter(function(x){return x.fecha===f}));h+='<div class="dia"><div class="dia-h"><span class="label">'+esc(fechaLarga(f))+'</span><span class="num muted">'+fmt(td)+'</span></div>'}
+    h+=filaMov(g);
+  });
+  $("movLista").innerHTML=h+'</div><p class="muted num" style="margin:14px 0 0">'+l.length+(l.length===1?" gasto":" gastos")+' · '+fmt(sumar(l))+'</p>';
+}
+function renderReporte(){
+  var sinCat=S.fcat;S.fcat="";$("filtrosRep").innerHTML=filtrosHTML(0);var l=filtrados();S.fcat=sinCat;
+  var t=sumar(l);
+  $("repTotal").innerHTML=totalHTML(l,(S.filtro==="todos"?"Total de ":"Gastos de "+nombre(S.filtro)+" en ")+mesLargo(S.mes))+(S.filtro==="todos"?presupuestoHTML(t):"");
+  /* por categoría */
+  var cats={};l.forEach(function(g){var c=cats[g.categoria]||(cats[g.categoria]={a:0,b:0,o:0,n:0});c[g.quien==="a"?"a":g.quien==="b"?"b":"o"]+=g.monto;c.n++});
+  var orden=Object.keys(cats).sort(function(x,y){return (cats[y].a+cats[y].b+cats[y].o)-(cats[x].a+cats[x].b+cats[x].o)});
+  var max=orden.length?cats[orden[0]].a+cats[orden[0]].b+cats[orden[0]].o:1;
+  var h="<h2>En qué se fue el dinero</h2>";
+  if(!orden.length)h+=vacio("Sin gastos en este mes.");
+  orden.forEach(function(c){var v=cats[c],s=v.a+v.b+v.o;h+='<div class="cat"><span><b>'+esc(c)+'</b> <small>'+v.n+(v.n===1?" gasto":" gastos")+'</small></span><span class="num"><b>'+fmt(s)+'</b> <small>'+(t?Math.round(s/t*100):0)+'%</small></span>'+barraPersonas(v.a,v.b,max)+'</div>'});
+  $("repCats").innerHTML=h;
+  /* por día */
+  var n=diasDelMes(S.mes),dias=[],i;for(i=0;i<n;i++)dias.push(0);
+  l.forEach(function(g){var d=+g.fecha.slice(8,10);if(d>=1&&d<=n)dias[d-1]+=g.monto});
+  var dmax=Math.max.apply(null,dias),hd=S.mes===hoy().slice(0,7)?new Date().getDate():0;
+  h='<h2>Gasto por día</h2>';
+  if(dmax>0){
+    h+='<div class="label num" style="margin-bottom:6px">Día más alto: '+fmt(dmax)+'</div><div class="dias" role="img" aria-label="Gasto de cada día del mes">';
+    dias.forEach(function(v,k){h+='<div class="'+(k+1===hd?"hoy":"")+'" style="height:'+(v/dmax*100).toFixed(1)+'%" title="Día '+(k+1)+': '+fmt(v)+'"></div>'});
+    h+='</div><div class="ejes num"><span>1</span><span>'+Math.round(n/2)+'</span><span>'+n+'</span></div><p class="muted num" style="margin:10px 0 0">Promedio por día con gasto: '+fmt(t/dias.filter(function(v){return v>0}).length)+'</p>';
+  }else h+=vacio("Sin gastos en este mes.");
+  $("repDias").innerHTML=h;
+  /* por método */
+  var mets={};l.forEach(function(g){mets[g.metodo]=(mets[g.metodo]||0)+g.monto});
+  h="<h2>Cómo se pagó</h2>";var mk=Object.keys(mets).sort(function(x,y){return mets[y]-mets[x]});
+  if(!mk.length)h+=vacio("Sin gastos en este mes.");
+  mk.forEach(function(m){h+='<div class="cat"><b>'+esc(m||"Sin especificar")+'</b><span class="num"><b>'+fmt(mets[m])+'</b> <small>'+(t?Math.round(mets[m]/t*100):0)+'%</small></span></div>'});
+  $("repMetodos").innerHTML=h;
+  /* casa, personal, trabajo */
+  var tp={};l.forEach(function(g){var c=tp[g.tipo]||(tp[g.tipo]={a:0,b:0,o:0});c[g.quien==="a"?"a":g.quien==="b"?"b":"o"]+=g.monto});
+  var tk=Object.keys(tp).sort(function(x,y){return (tp[y].a+tp[y].b+tp[y].o)-(tp[x].a+tp[x].b+tp[x].o)});
+  var tmax=tk.length?tp[tk[0]].a+tp[tk[0]].b+tp[tk[0]].o:1;
+  h="<h2>Casa, personal y trabajo</h2>";
+  if(!tk.length)h+=vacio("Sin gastos en este mes.");
+  tk.forEach(function(k){var v=tp[k],s=v.a+v.b+v.o;h+='<div class="cat"><b>'+esc(k)+'</b><span class="num"><b>'+fmt(s)+'</b> <small>'+(t?Math.round(s/t*100):0)+'%</small></span>'+barraPersonas(v.a,v.b,tmax)+'</div>'});
+  $("repTipos").innerHTML=h;
+  $("expBtn").textContent="Exportar "+mesLargo(S.mes)+" a Excel";
+  $("expBtn").disabled=!S.gastos.length||typeof XLSX==="undefined";
+}
+var ajCargado=false;
+function renderAjustes(){
+  if(!ajCargado){$("aj-a").value=nombre("a");$("aj-b").value=nombre("b");$("aj-p").value=S.cfg.presupuesto?S.cfg.presupuesto:"";ajCargado=true}
+  $("ajCorreo").textContent="Sesión iniciada con "+(usuario&&usuario.email||"")+".";
+  $("ajQuien").textContent="Los gastos que se registren aquí quedan a nombre de "+nombre(S.yo)+".";
+  $("admCats").innerHTML=cats().map(function(c){return '<span class="tag">'+esc(c)+'<button type="button" data-delcat="'+esc(c)+'" aria-label="Quitar '+esc(c)+'">×</button></span>'}).join("");
+  var ls=lugares().slice().sort(function(a,b){return a.nombre.localeCompare(b.nombre,"es")});
+  $("admLugares").innerHTML=ls.length?ls.map(function(l){return '<div class="adm"><button type="button" class="star'+(l.fav?" on":"")+'" data-fav="'+esc(l.id)+'" aria-pressed="'+(l.fav?"true":"false")+'" aria-label="Favorito">'+(l.fav?"★":"☆")+'</button><span><b>'+esc(l.nombre)+'</b><br><small class="muted">'+esc(l.categoria)+' · '+esc(l.tipo)+'</small></span><button type="button" class="x" data-dellug="'+esc(l.id)+'" aria-label="Quitar '+esc(l.nombre)+'">×</button></div>'}).join(""):'<p class="vacio">Aún no hay lugares. Agrega el primero abajo.</p>';
+  var sel=$("lug-cat"),v=sel.value;sel.innerHTML=cats().map(function(c){return "<option>"+esc(c)+"</option>"}).join("");if(v&&cats().indexOf(v)>=0)sel.value=v;
+}
+
+/* ---------- acciones ---------- */
+$("tabs").addEventListener("click",function(e){var b=e.target.closest("button[data-tab]");if(!b)return;S.tab=b.dataset.tab;if(S.tab!=="ajustes")ajCargado=false;guardarLocal("tab",S.tab);render()});
+$("mesPrev").addEventListener("click",function(){S.mes=moverMes(S.mes,-1);suscribirGastos();render()});
+$("mesNext").addEventListener("click",function(){S.mes=moverMes(S.mes,1);suscribirGastos();render()});
+$("quienBtn").addEventListener("click",function(){S.tab="ajustes";ajCargado=false;render()});
+$("cambiarBtn").addEventListener("click",function(){S.yo=null;guardarLocal("quien",null);render()});
+$("elegirBtns").addEventListener("click",function(e){var b=e.target.closest("button[data-yo]");if(!b)return;S.yo=b.dataset.yo;guardarLocal("quien",S.yo);render()});
+document.addEventListener("change",function(e){
+  var t=e.target;
+  if(t.name==="f-1"||t.name==="f-0"){S.filtro=t.value;render()}
+  if(t.id==="fcat"){S.fcat=t.value;render()}
+});
+
+$("altaForm").addEventListener("submit",function(e){
+  e.preventDefault();if(S.ocupado)return;
+  var a=$("alta-a").value.trim(),b=$("alta-b").value.trim(),p=parseMonto($("alta-p").value);
+  if(!a||!b){toast("Escribe los dos nombres.");return}
+  S.ocupado=true;
+  db.doc("config/familia").set({personas:[{id:"a",nombre:a},{id:"b",nombre:b}],presupuesto:p>0?p:0}).then(function(){S.yo="a";guardarLocal("quien","a")},errorEscritura).then(function(){S.ocupado=false;render()});
+});
+$("ajForm").addEventListener("submit",function(e){
+  e.preventDefault();if(S.ocupado)return;
+  var a=$("aj-a").value.trim(),b=$("aj-b").value.trim(),p=parseMonto($("aj-p").value);
+  if(!a||!b){toast("Escribe los dos nombres.");return}
+  S.ocupado=true;
+  db.doc("config/familia").set({personas:[{id:"a",nombre:a},{id:"b",nombre:b}],presupuesto:p>0?p:0}).then(function(){toast("Ajustes guardados")},errorEscritura).then(function(){S.ocupado=false});
+});
+
+$("nuevoForm").addEventListener("submit",function(e){
+  e.preventDefault();if(S.ocupado)return;
+  var d=leerCampos("n");if(!validar(d))return;
+  d.mes=d.fecha.slice(0,7);d.quien=S.yo;d.creado=Date.now();
+  S.ocupado=true;$("n-guardar").disabled=true;
+  db.collection("gastos").doc().set(d).then(function(){
+    $("n-monto").value="";$("n-lugar").value="";$("n-nota").value="";
+    toast(d.mes===S.mes?"Gasto guardado: "+fmt(d.monto):"Gasto guardado en "+mesLargo(d.mes));
+    $("n-monto").focus();
+  },errorEscritura).then(function(){S.ocupado=false;$("n-guardar").disabled=false});
+});
+
+function abrirEdicion(id){
+  var g=null;S.gastos.forEach(function(x){if(x.id===id)g=x});if(!g)return;
+  S.editId=id;
+  $("e-monto").value=g.monto;$("e-fecha").value=g.fecha;$("e-lugar").value=g.lugar;$("e-nota").value=g.nota;
+  if(METS.indexOf(g.metodo)>=0)$("e-met").value=g.metodo;
+  pintarCats("e",g.categoria);marcarTipo("e",g.tipo);
+  $("e-quien").innerHTML=S.cfg.personas.map(function(p){return '<option value="'+esc(p.id)+'"'+(p.id===g.quien?" selected":"")+'>'+esc(p.nombre)+'</option>'}).join("");
+  var b=$("e-borrar");b.textContent="Eliminar";b.dataset.paso="";
+  $("dlg").showModal();
+}
+document.addEventListener("click",function(e){var b=e.target.closest("button.mov");if(b)abrirEdicion(b.dataset.id)});
+$("e-cancelar").addEventListener("click",function(){$("dlg").close()});
+$("editForm").addEventListener("submit",function(e){
+  e.preventDefault();if(S.ocupado||!S.editId)return;
+  var d=leerCampos("e");if(!validar(d))return;
+  var orig=null;S.gastos.forEach(function(x){if(x.id===S.editId)orig=x});
+  d.mes=d.fecha.slice(0,7);d.quien=$("e-quien").value;d.creado=orig?orig.creado:Date.now();
+  S.ocupado=true;
+  db.doc("gastos/"+S.editId).set(d).then(function(){$("dlg").close();toast("Cambios guardados")},errorEscritura).then(function(){S.ocupado=false});
+});
+$("e-borrar").addEventListener("click",function(){
+  var b=$("e-borrar");
+  if(!b.dataset.paso){b.dataset.paso="1";b.textContent="Sí, eliminar este gasto";return}
+  if(S.ocupado||!S.editId)return;S.ocupado=true;
+  db.doc("gastos/"+S.editId).delete().then(function(){$("dlg").close();toast("Gasto eliminado")},errorEscritura).then(function(){S.ocupado=false});
+});
+
+$("expBtn").addEventListener("click",function(){
+  if(typeof XLSX==="undefined"||!S.gastos.length)return;
+  var l=S.gastos.slice().sort(function(a,b){return a.fecha<b.fecha?-1:a.fecha>b.fecha?1:a.creado-b.creado});
+  var filas=[["Fecha","Persona","Gasto de","Categoría","Lugar o comercio","Nota","Método de pago","Monto"]];
+  l.forEach(function(g){filas.push([g.fecha,nombre(g.quien),g.tipo,g.categoria,g.lugar,g.nota,g.metodo,g.monto])});
+  filas.push([]);filas.push(["","","","","","","Total",sumar(l)]);
+  var ws=XLSX.utils.aoa_to_sheet(filas);ws["!cols"]=[{wch:12},{wch:16},{wch:12},{wch:20},{wch:24},{wch:30},{wch:20},{wch:12}];
+  var t=sumar(l),p=+(S.cfg.presupuesto)||0;
+  var res=[["Resumen de "+mesLargo(S.mes)],[],["Total gastado",t]];
+  if(p){res.push(["Presupuesto",p]);res.push([t<=p?"Disponible":"Excedente",Math.abs(p-t)])}
+  res.push([]);res.push(["Por persona","Monto","% del total"]);
+  S.cfg.personas.forEach(function(x){var v=sumar(l.filter(function(g){return g.quien===x.id}));res.push([x.nombre,v,t?Math.round(v/t*1000)/10:0])});
+  res.push([]);var cab=["Por categoría"];S.cfg.personas.forEach(function(x){cab.push(x.nombre)});cab.push("Total");res.push(cab);
+  catsDe(l).forEach(function(c){var lc=l.filter(function(g){return g.categoria===c});if(!lc.length)return;var r=[c];S.cfg.personas.forEach(function(x){r.push(sumar(lc.filter(function(g){return g.quien===x.id})))});r.push(sumar(lc));res.push(r)});
+  res.push([]);var cab2=["Casa, personal y trabajo"];S.cfg.personas.forEach(function(x){cab2.push(x.nombre)});cab2.push("Total");res.push(cab2);
+  TIPOS.forEach(function(c){var lc=l.filter(function(g){return g.tipo===c});if(!lc.length)return;var r=[c];S.cfg.personas.forEach(function(x){r.push(sumar(lc.filter(function(g){return g.quien===x.id})))});r.push(sumar(lc));res.push(r)});
+  res.push([]);res.push(["Por método de pago","Monto"]);
+  METS.forEach(function(m){var v=sumar(l.filter(function(g){return g.metodo===m}));if(v)res.push([m,v])});
+  var ws2=XLSX.utils.aoa_to_sheet(res);ws2["!cols"]=[{wch:26},{wch:16},{wch:16},{wch:16}];
+  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws2,"Resumen");XLSX.utils.book_append_sheet(wb,ws,"Gastos");
+  try{XLSX.writeFile(wb,"gastos-"+S.mes+".xlsx");toast("Reporte generado")}catch(err){toast("No se pudo generar el reporte. Inténtalo de nuevo.")}
+});
+
+/* ---------- catálogo: categorías, lugares y favoritos ---------- */
+function catActual(){return {categorias:cats().slice(),lugares:lugares().map(function(l){return {id:String(l.id),nombre:String(l.nombre),categoria:String(l.categoria),tipo:String(l.tipo),fav:!!l.fav}})}}
+function guardarCat(next,msg){
+  if(S.ocupado)return;S.ocupado=true;
+  db.doc("config/catalogo").set(next).then(function(){toast(msg)},errorEscritura).then(function(){S.ocupado=false});
+}
+$("n-favs").addEventListener("click",function(e){
+  var b=e.target.closest("button[data-lugar]");if(!b)return;
+  lugares().forEach(function(l){if(l.id===b.dataset.lugar)aplicarLugar(l,true)});
+});
+$("n-lugar").addEventListener("change",function(){
+  var v=$("n-lugar").value.trim().toLowerCase();
+  lugares().forEach(function(l){if(l.nombre.toLowerCase()===v)aplicarLugar(l,false)});
+});
+$("catForm").addEventListener("submit",function(e){
+  e.preventDefault();var v=$("cat-nueva").value.trim();if(!v)return;
+  var c=catActual();
+  if(c.categorias.some(function(x){return x.toLowerCase()===v.toLowerCase()})){toast("Esa categoría ya existe.");return}
+  c.categorias.push(v);$("cat-nueva").value="";guardarCat(c,"Categoría agregada");
+});
+$("admCats").addEventListener("click",function(e){
+  var b=e.target.closest("button[data-delcat]");if(!b)return;
+  var c=catActual();if(c.categorias.length<2){toast("Debe quedar al menos una categoría.");return}
+  c.categorias=c.categorias.filter(function(x){return x!==b.dataset.delcat});
+  guardarCat(c,"Categoría quitada. Los gastos ya registrados la conservan.");
+});
+$("lugForm").addEventListener("submit",function(e){
+  e.preventDefault();var n=$("lug-nombre").value.trim();if(!n)return;
+  var c=catActual();
+  if(c.lugares.some(function(x){return x.nombre.toLowerCase()===n.toLowerCase()})){toast("Ese lugar ya está en la lista.");return}
+  c.lugares.push({id:"l"+Date.now().toString(36),nombre:n,categoria:$("lug-cat").value,tipo:$("lug-tipo").value,fav:$("lug-fav").checked});
+  $("lug-nombre").value="";guardarCat(c,"Lugar agregado");
+});
+$("admLugares").addEventListener("click",function(e){
+  var f=e.target.closest("button[data-fav]"),d=e.target.closest("button[data-dellug]");if(!f&&!d)return;
+  var c=catActual();
+  if(f){c.lugares.forEach(function(l){if(l.id===f.dataset.fav)l.fav=!l.fav});guardarCat(c,"Favoritos actualizados")}
+  else{c.lugares=c.lugares.filter(function(l){return l.id!==d.dataset.dellug});guardarCat(c,"Lugar quitado")}
+});
+
+/* ---------- arranque ---------- */
+var t0=leer("tab");if(t0&&["registrar","movimientos","reporte"].indexOf(t0)>=0)S.tab=t0;
+render();
+function detener(){
+  [unsubGastos,unsubCfg,unsubCat].forEach(function(u){if(u)u()});unsubGastos=unsubCfg=unsubCat=null;clearTimeout(timer);
+  S.gastos=[];S.gastosListos=false;S.cfg=null;S.cfgLista=false;S.cat=null;S.catVer++;aviso("");
+}
+if(typeof firebase==="undefined"){
+  $("cargando").innerHTML="<h2>Sin conexión</h2><p class=\"muted\">No se pudo cargar la app. Revisa tu internet y vuelve a abrirla.</p>";
+}else{
+  firebase.initializeApp(firebaseConfig);
+  auth=firebase.auth();db=firebase.firestore();
+  db.enablePersistence({synchronizeTabs:true}).catch(function(){});
+  auth.onAuthStateChanged(function(u){
+    authLista=true;detener();usuario=u||null;
+    if(usuario)iniciarDatos();
+    render();
+  });
+  $("loginForm").addEventListener("submit",function(e){
+    e.preventDefault();var b=$("login-btn");b.disabled=true;
+    auth.signInWithEmailAndPassword($("login-correo").value.trim(),$("login-clave").value).then(function(){$("login-clave").value=""},function(err){
+      var c=err&&err.code||"";
+      toast(c==="auth/network-request-failed"?"Sin conexión. Inténtalo de nuevo.":c==="auth/too-many-requests"?"Demasiados intentos. Espera unos minutos.":"Correo o contraseña incorrectos.");
+    }).then(function(){b.disabled=false});
+  });
+  $("salirBtn").addEventListener("click",function(){auth.signOut()});
+}
+})();
+</script>
+</body>
+</html>
