@@ -97,7 +97,7 @@ form.f{display:flex;flex-direction:column;gap:14px}
 .kpis b{display:block;font-family:var(--display);font-weight:600;font-size:.98rem;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .bar{display:flex;height:9px;border-radius:999px;background:var(--line);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--green)}
-.bar i.r{background:var(--red)} .bar i.g{background:var(--gray)}
+.bar i.r{background:var(--red)} .bar i.g{background:var(--gray)} .bar i.l{background:#A9DFC4}
 .linea{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline;padding:9px 0;border-top:1px solid var(--line)}
 .linea:first-of-type{border-top:0}
 .linea .bar{grid-column:1/-1}
@@ -241,6 +241,7 @@ nav.bottom button[aria-current="page"]{color:var(--green-d);background:var(--gre
       </div>
       <div class="stack">
         <div class="panel" id="g-resumen"></div>
+        <div class="panel" id="g-viene"></div>
         <div class="panel"><h2>Registrados hoy</h2><div id="g-hoy"></div></div>
       </div>
     </div>
@@ -256,7 +257,11 @@ nav.bottom button[aria-current="page"]{color:var(--green-d);background:var(--gre
       <div class="panel">
         <h2 id="i-titulo">Nuevo ingreso</h2>
         <form id="iForm" class="f" novalidate>
-          <div class="campo"><label class="label" for="i-monto">Monto</label><div class="monto"><span>$</span><input id="i-monto" inputmode="decimal" placeholder="0.00" autocomplete="off"></div></div>
+          <div class="campo"><label class="label" for="i-monto">Monto</label><div class="monto"><span id="i-sim">$</span><input id="i-monto" inputmode="decimal" placeholder="0.00" autocomplete="off"></div><small class="muted num" id="i-estim" hidden></small></div>
+          <div class="campo"><span class="label" id="i-monl">Moneda</span><div class="chips" role="radiogroup" aria-labelledby="i-monl">
+            <label class="chip"><input type="radio" name="i-mon" id="i-mon-m" value="MXN" checked><span>Pesos</span></label>
+            <label class="chip"><input type="radio" name="i-mon" id="i-mon-u" value="USD"><span>Dólares</span></label></div></div>
+          <label class="campo" id="i-mxnbox" hidden><span class="label">Pesos que recibiste</span><input id="i-mxn" inputmode="decimal" placeholder="Lo que llegó a tu cuenta" autocomplete="off"></label>
           <div class="fila">
             <label class="campo"><span class="label">Cliente</span><input id="i-cliente" list="dl-clientes" maxlength="60" autocomplete="off"></label>
             <label class="campo"><span class="label">Concepto</span><input id="i-concepto" maxlength="100" placeholder="Ej. Anticipo" autocomplete="off"></label>
@@ -268,12 +273,14 @@ nav.bottom button[aria-current="page"]{color:var(--green-d);background:var(--gre
             <label class="campo"><span class="label" id="i-fechal">Fecha de pago</span><input type="date" id="i-fecha"></label>
             <label class="campo"><span class="label">Forma de pago</span><select id="i-met"></select></label>
           </div>
+          <div class="acciones" id="i-rapidos" hidden><span class="muted">Me pagan:</span><button type="button" class="btn sec chico" data-a="iDias" data-n="30">A 30 días</button><button type="button" class="btn sec chico" data-a="iDias" data-n="60">A 60 días</button><button type="button" class="btn sec chico" data-a="iDias" data-n="90">A 90 días</button></div>
           <label class="campo"><span class="label">Proyecto (opcional)</span><select id="i-proy"></select></label>
           <div class="acciones"><button class="btn" type="submit" id="i-guardar">Guardar ingreso</button><button class="btn sec" type="button" id="i-cancelar" data-a="cancelI" hidden>Cancelar</button><button class="btn peligro" type="button" id="i-borrar" data-a="delI" hidden>Eliminar</button></div>
         </form>
       </div>
       <div class="stack">
         <div class="panel" id="i-resumen"></div>
+        <div class="panel" id="i-viene"></div>
         <div class="panel"><h2>Por cobrar</h2><div id="i-pend"></div></div>
         <div class="panel"><h2 id="i-cobt">Cobrado</h2><div id="i-cob"></div></div>
       </div>
@@ -408,6 +415,8 @@ nav.bottom button[aria-current="page"]{color:var(--green-d);background:var(--gre
         <div class="panel"><h2>Lugares frecuentes y favoritos</h2><p class="muted" style="margin-top:0">Los marcados con ★ aparecen como botones al registrar un gasto.</p><div id="a-lugares"></div>
           <form id="lugForm" class="f" style="margin-top:14px"><label class="campo"><span class="label">Nuevo lugar</span><input id="lug-nombre" maxlength="60" autocomplete="off"></label><div class="fila"><label class="campo"><span class="label">Categoría</span><select id="lug-cat"></select></label><label class="campo"><span class="label">Gasto de</span><select id="lug-tipo"><option>Casa</option><option>Personal</option><option>Trabajo</option></select></label></div><label class="check"><input type="checkbox" id="lug-fav" checked> Mostrar en favoritos</label><div class="acciones"><button class="btn" type="submit">Agregar lugar</button></div></form></div>
         <div class="panel"><h2>Importar desde archivo</h2><p class="muted" style="margin-top:0">Carga gastos e ingresos desde un archivo de importación (.json). Volver a cargar el mismo archivo no duplica nada.</p><input type="file" id="imp-file" accept=".json,application/json" class="in"></div>
+        <div class="panel"><h2>Tipo de cambio del dólar</h2><p class="muted" style="margin-top:0">Se usa solo para estimar en pesos tus cobros pendientes en dólares. Al cobrar, registras los pesos que de verdad recibiste.</p>
+          <form id="tcForm" class="f"><label class="campo" style="max-width:220px"><span class="label">Pesos por dólar</span><input id="a-tc" inputmode="decimal" autocomplete="off"></label><div class="acciones"><button class="btn" type="submit">Guardar tipo de cambio</button></div></form></div>
         <div class="panel"><h2>Mi cuenta</h2><p class="muted" id="a-cuenta" style="margin-top:0"></p><button class="btn sec" type="button" data-a="salir">Cerrar sesión</button></div>
       </div>
     </div>
@@ -475,7 +484,7 @@ const agrupar=(a,k)=>{const o={};a.forEach(x=>{const c=typeof k==="function"?k(x
 const nid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
 const S={rango:null,mes:hoy().slice(0,7),vista:"gastos",sub:{gastos:"registrar",reporte:"mio",proyectos:"cot"},perfil:undefined,pv:0,pvHecho:-1,
-  gastos:[],ingresos:[],evM:[],evC:[],cots:[],proys:[],res:[],edit:{},drill:null,drillJ:null,cot:null,proy:null,proyCargado:null};
+  gastos:[],ingresos:[],ingRaw:[],evM:[],evC:[],cots:[],proys:[],res:[],edit:{},drill:null,drillJ:null,cot:null,proy:null,proyCargado:null};
 let db=null,auth=null,usuario=null,uid=null,U=null,authLista=false,subs={},timer=null;
 
 const P=()=>S.perfil||{};
@@ -512,18 +521,22 @@ function subMes(){
   sub("gastos",col("gastos").where("mes",">=",(m=>S.rango&&S.rango.de.slice(0,7)<m?S.rango.de.slice(0,7):m)(moverMes(S.mes,-5))).where("mes","<=",S.mes),s=>{S.gastos=lista(s);render()});
   sub("res",db.collection("resumenes").where("mes","==",S.mes),s=>{S.res=lista(s);render()});
 }
+const tc=()=>+P().tc>0?+P().tc:18.35;
+const esUSD=i=>i.moneda==="USD";
+const fUSD=n=>"USD "+(+n||0).toLocaleString("es-MX",{minimumFractionDigits:2,maximumFractionDigits:2});
+function normIng(){S.ingresos=S.ingRaw.map(i=>esUSD(i)&&i.estado==="por_cobrar"?Object.assign({},i,{monto:Math.round((+i.usd||0)*tc()*100)/100}):i)}
 function iniciar(){
   U=db.doc("usuarios/"+uid);
   timer=setTimeout(()=>{if(S.perfil===undefined)aviso("Todavía no se puede conectar con tu libreta. Revisa tu internet.")},10000);
-  sub("perfil",U,s=>{if(s.exists)S.perfil=s.data();else if(!s.metadata.fromCache)S.perfil=null;if(S.perfil!==undefined){clearTimeout(timer);aviso("")}S.pv++;render()});
-  sub("ing",col("ingresos"),s=>{S.ingresos=lista(s);render()});
+  sub("perfil",U,s=>{if(s.exists)S.perfil=s.data();else if(!s.metadata.fromCache)S.perfil=null;if(S.perfil!==undefined){clearTimeout(timer);aviso("")}S.pv++;normIng();render()});
+  sub("ing",col("ingresos"),s=>{S.ingRaw=lista(s);normIng();render()});
   sub("evM",col("eventos"),s=>{S.evM=lista(s);render()});
   sub("evC",db.collection("eventos"),s=>{S.evC=lista(s).map(e=>Object.assign(e,{comp:true}));render()});
   sub("cots",col("cotizaciones"),s=>{S.cots=lista(s);render()});
   sub("proys",col("proyectos"),s=>{S.proys=lista(s);render()});
   subMes();
 }
-function detener(){Object.keys(subs).forEach(k=>subs[k]());subs={};clearTimeout(timer);if(S.vista==="ajustes")S.vista="gastos";Object.assign(S,{rango:null,sub:{gastos:"registrar",reporte:"mio",proyectos:"cot"},drill:null,drillJ:null,perfil:undefined,gastos:[],ingresos:[],evM:[],evC:[],cots:[],proys:[],res:[],edit:{},cot:null,proy:null});aviso("")}
+function detener(){Object.keys(subs).forEach(k=>subs[k]());subs={};clearTimeout(timer);if(S.vista==="ajustes")S.vista="gastos";Object.assign(S,{rango:null,sub:{gastos:"registrar",reporte:"mio",proyectos:"cot"},drill:null,drillJ:null,ingRaw:[],perfil:undefined,gastos:[],ingresos:[],evM:[],evC:[],cots:[],proys:[],res:[],edit:{},cot:null,proy:null});aviso("")}
 function guardarPerfil(c,msg){escribir(U.set(Object.assign({},P(),c)),msg)}
 
 /* ---------- render ---------- */
@@ -545,6 +558,7 @@ function render(){
 }
 function syncForms(){
   fill($("g-cat"),cats());fill($("lug-cat"),cats());fill($("l-cat"),cats());
+  if(document.activeElement!==$("a-tc"))$("a-tc").value=tc();
   ["g-met","i-met","pg-met"].forEach(id=>fill($(id),metodos()));
   const f=lugares().filter(l=>l.fav);
   $("g-favbox").hidden=!f.length;
@@ -558,6 +572,12 @@ const R={};
 function filaG(g,quien){
   const s=[g.categoria,g.tipo,g.metodo,quien].filter(Boolean).join(" · ")+(g.lugar&&g.nota?" · "+g.nota:"");
   return '<button type="button" class="row" data-a="editG" data-id="'+esc(g.id)+'"><span class="t">'+esc(g.lugar||g.nota||g.categoria)+'</span><span class="m">'+fmt(g.monto)+'</span><span class="s">'+esc(s)+"</span></button>";
+}
+const pend=()=>S.ingresos.filter(i=>i.estado==="por_cobrar");
+const cap=t=>t.charAt(0).toUpperCase()+t.slice(1);
+function vieneHTML(){
+  const ms=[1,2,3].map(i=>moverMes(S.mes,i)),v=ms.map(m=>sum(pend().filter(i=>i.mes===m))),mx=Math.max.apply(null,v),tot=v.reduce((a,b)=>a+b,0);
+  return "<h2>Lo que viene</h2>"+(tot?ms.map((m,k)=>'<div class="linea"><b>'+esc(cap(mesLargo(m)))+'</b><span class="num">'+(v[k]?fmt(v[k]):'<small>Sin cobros</small>')+"</span>"+barra(v[k],mx,"l")+"</div>").join("")+'<p class="muted num" style="margin:10px 0 0">Esperas '+fmt(tot)+" en los próximos tres meses. Es dinero por cobrar, todavía no lo tienes."+(pend().some(i=>esUSD(i)&&ms.includes(i.mes))?" Incluye dólares estimados a "+fmt(tc())+".":"")+"</p>":vacio('No tienes cobros esperados en los próximos tres meses. Regístralos en Ingresos como "Por cobrar".'));
 }
 let dlPrev="";
 function dlLugares(){const h=Array.from(new Set(lugares().map(l=>l.nombre).concat(S.gastos.map(g=>g.lugar)).filter(Boolean))).sort((a,b)=>a.localeCompare(b,"es")).map(n=>'<option value="'+esc(n)+'"></option>').join("");if(h!==dlPrev){dlPrev=h;$("dl-lugares").innerHTML=h}}
@@ -576,9 +596,10 @@ R.gastos=()=>{
   const reg=S.sub.gastos==="registrar";$("g-registrar").hidden=!reg;$("g-movs").hidden=reg;
   const g=gm();
   if(reg){
-    const ing=sum(cobP()),t=sum(g),bal=ing-t,mx=Math.max(ing,t),pc=agrupar(g,"categoria"),top=pc.slice(0,4),resto=pc.slice(4);
+    const ing=sum(cobP()),t=sum(g),bal=ing-t,tp=sum(pend().filter(i=>enP(i.fecha))),atr=pend().filter(i=>i.fecha<hoy()),mx=Math.max(ing,t,tp),pc=agrupar(g,"categoria"),top=pc.slice(0,4),resto=pc.slice(4);
     if(resto.length)top.push({k:"Otras",v:sum(resto,"v")});
-    $("g-resumen").innerHTML='<div class="label">Balance '+esc(pEn())+'</div><div class="total'+(bal>=0?" ok":"")+'">'+fmt(bal)+'</div><p class="muted" style="margin:4px 0 0">'+(ing||t?(bal>=0?"Te queda esto después de tus gastos.":"Gastaste "+fmt(-bal)+" más de lo que cobraste."):"Aún no hay movimientos.")+'</p><div class="bal num"><span>Cobrado</span>'+barra(ing,mx)+'<b class="ok">'+fmt(ing)+'</b><span>Gastado</span>'+barra(t,mx,"g")+"<b>"+fmt(t)+'</b></div><p class="muted num" style="margin:0">'+g.length+(g.length===1?" gasto":" gastos")+"</p>"+(top.length?'<div class="mini">'+dona(top,t)+'<div class="ley">'+top.map((x,i)=>'<div><i style="background:'+PAL[Math.min(i,PAL.length-1)]+'"></i><span>'+esc(x.k)+'</span><span class="num muted">'+pct(x.v,t)+"%</span></div>").join("")+"</div></div>":"")+limsSuave(gmes());
+    $("g-resumen").innerHTML='<div class="label">Balance '+esc(pEn())+'</div><div class="total'+(bal>=0?" ok":"")+'">'+fmt(bal)+'</div><p class="muted" style="margin:4px 0 0">'+(ing||t?(bal>=0?"Te queda esto después de tus gastos.":"Gastaste "+fmt(-bal)+" más de lo que cobraste."):"Aún no hay movimientos.")+'</p><div class="bal num"><span>Cobrado</span>'+barra(ing,mx)+'<b class="ok">'+fmt(ing)+'</b><span>Gastado</span>'+barra(t,mx,"g")+"<b>"+fmt(t)+"</b>"+(tp?"<span>Por cobrar</span>"+barra(tp,mx,"l")+"<b>"+(pend().some(i=>esUSD(i)&&enP(i.fecha))?"≈ ":"")+fmt(tp)+"</b>":"")+'</div><p class="muted num" style="margin:0">'+g.length+(g.length===1?" gasto":" gastos")+"</p>"+(tp?'<p class="num" style="margin:8px 0 0">Si te pagan todo, cerrarías '+(S.rango?"el periodo":"el mes")+' en <b class="'+(bal+tp>=0?"ok":"")+'">'+fmt(bal+tp)+"</b>.</p>":"")+(atr.length?'<p class="muted num" style="margin:4px 0 0">'+atr.length+(atr.length===1?" cobro atrasado: ":" cobros atrasados: ")+fmt(sum(atr))+".</p>":"")+(top.length?'<div class="mini">'+dona(top,t)+'<div class="ley">'+top.map((x,i)=>'<div><i style="background:'+PAL[Math.min(i,PAL.length-1)]+'"></i><span>'+esc(x.k)+'</span><span class="num muted">'+pct(x.v,t)+"%</span></div>").join("")+"</div></div>":"")+limsSuave(gmes());
+    $("g-viene").innerHTML=vieneHTML();
     const h=hoy(),l=g.filter(x=>x.fecha===h);
     $("g-hoy").innerHTML=l.length?l.map(x=>filaG(x)).join("")+'<p class="muted num" style="margin:10px 0 0">Total de hoy: '+fmt(sum(l))+"</p>":vacio(enP(h)?"Aún no registras gastos hoy.":"Hoy queda fuera del periodo que estás viendo.");
   }else{
@@ -612,12 +633,13 @@ $("g-lugar").addEventListener("change",()=>{const v=$("g-lugar").value.trim().to
 const proyNombre=id=>{const p=S.proys.find(x=>x.id===id);return p?p.nombre:""};
 function filaI(i,pend){
   const atras=pend&&i.fecha<hoy();
-  return '<div class="row"><button type="button" class="row" style="border:0;padding:0;grid-column:1" data-a="editI" data-id="'+esc(i.id)+'"><span class="t">'+esc(i.cliente||"Sin cliente")+'</span><span class="m ok">'+fmt(i.monto)+'</span><span class="s">'+esc([i.concepto,(pend?"Se espera el ":"")+fCorta(i.fecha),pend?"":i.metodo,proyNombre(i.proyecto)].filter(Boolean).join(" · "))+(atras?' <span class="pill r">Atrasado</span>':"")+"</span></button>"+(pend?'<button type="button" class="btn chico" data-a="cobrarI" data-id="'+esc(i.id)+'">Cobrado</button>':"")+"</div>";
+  return '<div class="row"><button type="button" class="row" style="border:0;padding:0;grid-column:1" data-a="editI" data-id="'+esc(i.id)+'"><span class="t">'+esc(i.cliente||"Sin cliente")+'</span><span class="m ok">'+(pend&&esUSD(i)?"≈ ":"")+fmt(i.monto)+'</span><span class="s">'+esc([esUSD(i)?fUSD(i.usd):"",i.concepto,(pend?"Se espera el ":"")+fCorta(i.fecha),pend?"":i.metodo,proyNombre(i.proyecto)].filter(Boolean).join(" · "))+(atras?' <span class="pill r">Atrasado</span>':"")+"</span></button>"+(pend?'<button type="button" class="btn chico" data-a="cobrarI" data-id="'+esc(i.id)+'">Cobrado</button>':"")+"</div>";
 }
 R.ingresos=()=>{
   $("dl-clientes").innerHTML=Array.from(new Set(S.ingresos.map(i=>i.cliente).concat(S.proys.map(p=>p.cliente)).filter(Boolean))).map(c=>'<option value="'+esc(c)+'"></option>').join("");
   const sel=$("i-proy"),v=sel.value;sel.innerHTML='<option value="">Sin proyecto</option>'+S.proys.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===v?" selected":"")+">"+esc(p.nombre)+"</option>").join("");
   $("i-fechal").textContent=radio("i-est")==="cobrado"?"Fecha de pago":"Fecha esperada";
+  updUSD();$("i-rapidos").hidden=radio("i-est")==="cobrado";$("i-viene").innerHTML=vieneHTML();
   const cob=cobP().sort((a,b)=>a.fecha<b.fecha?1:-1),pen=S.ingresos.filter(i=>i.estado==="por_cobrar").sort((a,b)=>a.fecha<b.fecha?-1:1);
   const tc=sum(cob),tp=sum(pen),pc=agrupar(cob,"cliente");
   $("i-resumen").innerHTML='<div class="kpis" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div><span class="label">Cobrado</span><b class="ok">'+fmt(tc)+'</b></div><div><span class="label">Por cobrar</span><b>'+fmt(tp)+"</b></div></div>"+(pc.length?"<h3>Quién te pagó</h3>"+pc.map(x=>'<div class="linea"><b>'+esc(x.k||"Sin cliente")+'</b><span class="num">'+fmt(x.v)+" <small>"+pct(x.v,tc)+"%</small></span>"+barra(x.v,pc[0].v)+"</div>").join(""):"");
@@ -625,21 +647,25 @@ R.ingresos=()=>{
   $("i-cobt").textContent="Cobrado "+pEn();
   $("i-cob").innerHTML=cob.length?cob.map(i=>filaI(i)).join(""):vacio("Sin ingresos cobrados en este periodo.");
 };
-function limpiarI(){S.edit.ingreso=null;["i-monto","i-cliente","i-concepto"].forEach(i=>{$(i).value=""});$("i-fecha").value=hoy();$("i-proy").value="";setRadio("i-est","cobrado");$("i-titulo").textContent="Nuevo ingreso";$("i-guardar").textContent="Guardar ingreso";$("i-cancelar").hidden=$("i-borrar").hidden=true;reset($("i-borrar"))}
+function updUSD(){const u=radio("i-mon")==="USD",c=radio("i-est")==="cobrado",m=num($("i-monto").value);$("i-sim").textContent=u?"US$":"$";$("i-mxnbox").hidden=!(u&&c);const e=$("i-estim");e.hidden=!(u&&!c);if(!e.hidden)e.textContent=(m>0?"≈ "+fmt(m*tc())+" · ":"")+"Estimado con el dólar a "+fmt(tc())+". Puedes cambiarlo en Ajustes."}
+function limpiarI(){S.edit.ingreso=null;setRadio("i-mon","MXN");["i-monto","i-cliente","i-concepto","i-mxn"].forEach(i=>{$(i).value=""});$("i-fecha").value=hoy();$("i-proy").value="";setRadio("i-est","cobrado");$("i-titulo").textContent="Nuevo ingreso";$("i-guardar").textContent="Guardar ingreso";$("i-cancelar").hidden=$("i-borrar").hidden=true;reset($("i-borrar"))}
 function cargarI(i,nuevo){S.edit.ingreso=nuevo?null:i.id;S.vista="ingresos";render();
-  $("i-monto").value=i.monto;$("i-cliente").value=i.cliente||"";$("i-concepto").value=i.concepto||"";$("i-fecha").value=i.fecha;setRadio("i-est",i.estado);fill($("i-met"),metodos(),i.metodo||"Transferencia");$("i-proy").value=i.proyecto||"";
+  setRadio("i-mon",esUSD(i)?"USD":"MXN");$("i-monto").value=esUSD(i)?i.usd:i.monto;$("i-mxn").value=esUSD(i)&&i.estado==="cobrado"?i.monto:"";$("i-cliente").value=i.cliente||"";$("i-concepto").value=i.concepto||"";$("i-fecha").value=i.fecha;setRadio("i-est",i.estado);fill($("i-met"),metodos(),i.metodo||"Transferencia");$("i-proy").value=i.proyecto||"";
   if(!nuevo){$("i-titulo").textContent="Editar ingreso";$("i-guardar").textContent="Guardar cambios";$("i-cancelar").hidden=$("i-borrar").hidden=false}
   render();window.scrollTo(0,0)}
 $("iForm").addEventListener("submit",e=>{e.preventDefault();
   const d={monto:num($("i-monto").value),cliente:$("i-cliente").value.trim(),concepto:$("i-concepto").value.trim(),estado:radio("i-est"),fecha:$("i-fecha").value,metodo:$("i-met").value,proyecto:$("i-proy").value};
   if(!(d.monto>0))return toast("Escribe un monto mayor a cero.");
+  if(radio("i-mon")==="USD"){d.moneda="USD";d.usd=d.monto;if(d.estado==="cobrado"){const r=num($("i-mxn").value);if(!(r>0))return toast("Escribe cuántos pesos recibiste.");d.monto=r}else d.monto=Math.round(d.usd*tc()*100)/100}
   if(!d.cliente)return toast("Escribe quién te paga.");
   if(!/^\d{4}-\d{2}-\d{2}$/.test(d.fecha))return toast("Elige la fecha.");
   d.mes=d.fecha.slice(0,7);const prev=S.ingresos.find(x=>x.id===S.edit.ingreso);d.creado=prev?prev.creado||Date.now():Date.now();
   const ref=S.edit.ingreso?col("ingresos").doc(S.edit.ingreso):col("ingresos").doc();
   escribir(ref.set(d),S.edit.ingreso?"Cambios guardados":"Ingreso guardado: "+fmt(d.monto),limpiarI);
 });
-document.querySelectorAll('input[name="i-est"]').forEach(r=>r.addEventListener("change",render));
+document.querySelectorAll('input[name="i-est"],input[name="i-mon"]').forEach(r=>r.addEventListener("change",render));
+$("i-monto").addEventListener("input",updUSD);
+$("tcForm").addEventListener("submit",e=>{e.preventDefault();const v=num($("a-tc").value);if(!(v>0))return toast("Escribe cuántos pesos vale un dólar.");guardarPerfil({tc:v},"Tipo de cambio guardado")});
 
 /* ---------- calendario ---------- */
 const eventos=()=>S.evM.concat(S.evC);
@@ -752,7 +778,7 @@ function excel(){
   const wb=XLSX.utils.book_new(),hoja=(n,f,w)=>{const ws=XLSX.utils.aoa_to_sheet(f);ws["!cols"]=w.map(x=>({wch:x}));XLSX.utils.book_append_sheet(wb,ws,n)};
   hoja("Resumen",res,[28,16,14]);
   hoja("Gastos",[["Fecha","Gasto de","Categoría","Lugar o concepto","Nota","Forma de pago","Monto"]].concat(g.map(x=>[x.fecha,x.tipo,x.categoria,x.lugar,x.nota,x.metodo,x.monto]),[[],["","","","","","Total",t]]),[12,12,22,30,26,18,12]);
-  hoja("Ingresos",[["Fecha","Cliente","Concepto","Forma de pago","Proyecto","Monto"]].concat(ing.map(x=>[x.fecha,x.cliente,x.concepto,x.metodo,proyNombre(x.proyecto),x.monto]),[[],["","","","","Total",ti]]),[12,24,30,18,24,12]);
+  hoja("Ingresos",[["Fecha","Cliente","Concepto","Forma de pago","Proyecto","Dólares","Monto en pesos"]].concat(ing.map(x=>[x.fecha,x.cliente,x.concepto,x.metodo,proyNombre(x.proyecto),esUSD(x)?x.usd:"",x.monto]),[[],["","","","","","Total",ti]]),[12,24,30,18,24,12,16]);
   try{XLSX.writeFile(wb,S.rango?"gastos-"+S.rango.de+"-a-"+S.rango.a+".xlsx":"mi-mes-"+S.mes+".xlsx");toast("Reporte generado")}catch(e){toast("No se pudo generar el reporte.")}
 }
 
@@ -836,12 +862,13 @@ const A={
   delG:b=>{if(!confirma(b,"Sí, eliminar"))return;escribir(col("gastos").doc(S.edit.gasto).delete(),"Gasto eliminado",limpiarG)},
   editI:b=>{const i=S.ingresos.find(x=>x.id===b.dataset.id);if(i)cargarI(i)},cancelI:()=>{limpiarI();render()},
   delI:b=>{if(!confirma(b,"Sí, eliminar"))return;escribir(col("ingresos").doc(S.edit.ingreso).delete(),"Ingreso eliminado",limpiarI)},
-  cobrarI:b=>{const i=S.ingresos.find(x=>x.id===b.dataset.id);if(!i)return;const d=Object.assign({},i,{estado:"cobrado",fecha:hoy(),mes:hoy().slice(0,7)});delete d.id;escribir(col("ingresos").doc(i.id).set(d),"Marcado como cobrado hoy")},
+  cobrarI:b=>{const i=S.ingresos.find(x=>x.id===b.dataset.id);if(!i)return;if(esUSD(i)){cargarI(Object.assign({},i,{estado:"cobrado",fecha:hoy()}));$("i-mxn").value="";$("i-mxn").focus();return toast("Escribe los pesos que recibiste y guarda.")}const d=Object.assign({},i,{estado:"cobrado",fecha:hoy(),mes:hoy().slice(0,7)});delete d.id;escribir(col("ingresos").doc(i.id).set(d),"Marcado como cobrado hoy")},
   dia:b=>{$("e-fecha").value=b.dataset.f;$("e-titulo").focus()},
   ics:b=>{const e=buscarE(b.dataset.id,b.dataset.c);if(e)abrirICS(e)},
   editE:b=>{const e=buscarE(b.dataset.id,b.dataset.c);if(!e)return;S.edit.evento={id:e.id,comp:!!e.comp};$("e-titulo").value=e.titulo;$("e-fecha").value=e.fecha;$("e-monto").value=e.monto||"";$("e-rep").value=e.rep||"no";$("e-aviso").value=String(e.aviso||0);setRadio("e-comp",e.comp?"c":"m");$("e-titulof").textContent="Editar pago o evento";$("e-cancelar").hidden=$("e-borrar").hidden=false;$("eForm").scrollIntoView({block:"center"})},
   cancelE:()=>limpiarE(),
   delE:b=>{if(!confirma(b,"Sí, eliminar"))return;const ed=S.edit.evento;escribir((ed.comp?db.collection("eventos"):col("eventos")).doc(ed.id).delete(),"Eliminado",limpiarE)},
+  iDias:b=>{const d=new Date();d.setDate(d.getDate()+(+b.dataset.n));$("i-fecha").value=iso(d)},
   drill:b=>{S.drill=S.drill===b.dataset.c?null:b.dataset.c;render()},
   drillJ:b=>{S.drillJ=S.drillJ===b.dataset.c?null:b.dataset.c;render()},
   compartir:()=>escribir(db.doc("resumenes/"+S.mes+"_"+uid).set(miResumen()),"Resumen compartido"),

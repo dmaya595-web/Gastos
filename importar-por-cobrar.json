@@ -1,0 +1,119 @@
+{
+ "gastos": [],
+ "ingresos": [
+  {
+   "id": "xl-pc-pand",
+   "cliente": "Panditas",
+   "concepto": "Proyecto realizado · pago total",
+   "monto": 14400,
+   "fecha": "2026-11-15",
+   "mes": "2026-11",
+   "estado": "por_cobrar",
+   "metodo": "Transferencia",
+   "proyecto": "",
+   "creado": 1760000001001
+  },
+  {
+   "id": "xl-pc-doc-nov",
+   "cliente": "Doctores",
+   "concepto": "Servicio noviembre",
+   "monto": 34320,
+   "fecha": "2026-11-30",
+   "mes": "2026-11",
+   "estado": "por_cobrar",
+   "metodo": "Transferencia",
+   "proyecto": "",
+   "creado": 1760000001002
+  },
+  {
+   "id": "xl-pc-doc-dic",
+   "cliente": "Doctores",
+   "concepto": "Servicio diciembre",
+   "monto": 34320,
+   "fecha": "2026-12-31",
+   "mes": "2026-12",
+   "estado": "por_cobrar",
+   "metodo": "Transferencia",
+   "proyecto": "",
+   "creado": 1760000001003
+  },
+  {
+   "id": "xl-pc-doc-ene",
+   "cliente": "Doctores",
+   "concepto": "Servicio enero",
+   "monto": 34320,
+   "fecha": "2027-01-31",
+   "mes": "2027-01",
+   "estado": "por_cobrar",
+   "metodo": "Transferencia",
+   "proyecto": "",
+   "creado": 1760000001004
+  },
+  {
+   "id": "xl-pc-doc-feb",
+   "cliente": "Doctores",
+   "concepto": "Servicio febrero",
+   "monto": 34320,
+   "fecha": "2027-02-28",
+   "mes": "2027-02",
+   "estado": "por_cobrar",
+   "metodo": "Transferencia",
+   "proyecto": "",
+   "creado": 1760000001005
+  },
+  {
+   "id": "xl-pc-doc-mar",
+   "cliente": "Doctores",
+   "concepto": "Servicio marzo",
+   "monto": 34320,
+   "fecha": "2027-03-31",
+   "mes": "2027-03",
+   "estado": "por_cobrar",
+   "metodo": "Transferencia",
+   "proyecto": "",
+   "creado": 1760000001006
+  },
+  {
+   "id": "xl-pc-halls",
+   "cliente": "Halls",
+   "concepto": "Proyecto octubre · factura a 60 días",
+   "moneda": "USD",
+   "usd": 2088,
+   "monto": 38314.8,
+   "fecha": "2026-12-28",
+   "mes": "2026-12",
+   "estado": "por_cobrar",
+   "metodo": "Transferencia",
+   "proyecto": "",
+   "creado": 1760000002000
+  },
+  {
+   "id": "xl-pc-renault",
+   "cliente": "Renault",
+   "concepto": "Proyecto octubre · factura a 60 días",
+   "moneda": "USD",
+   "usd": 2000,
+   "monto": 36700.0,
+   "fecha": "2027-01-01",
+   "mes": "2027-01",
+   "estado": "por_cobrar",
+   "metodo": "Transferencia",
+   "proyecto": "",
+   "creado": 1760000002001
+  },
+  {
+   "id": "xl-pc-abuelita",
+   "cliente": "Chocolate Abuelita",
+   "concepto": "Proyecto octubre · pago total",
+   "moneda": "USD",
+   "usd": 2668,
+   "monto": 48957.8,
+   "fecha": "2026-12-27",
+   "mes": "2026-12",
+   "estado": "por_cobrar",
+   "metodo": "Transferencia",
+   "proyecto": "",
+   "creado": 1760000002002
+  }
+ ]
+}
