@@ -37,8 +37,18 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background
 .top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding-block:10px}
 .brand{font-family:var(--display);font-weight:700;font-size:1.2rem;color:var(--green-d);margin-right:auto}
 .month{display:flex;align-items:center;gap:2px}
-.month button{border:0;background:var(--soft);border-radius:50%;width:34px;height:34px;font-size:1.1rem;line-height:1;color:var(--green-d)}
-.month span{min-width:8.6em;text-align:center;font-weight:600;text-transform:capitalize}
+.month button:not(.link){border:0;background:var(--soft);border-radius:50%;width:34px;height:34px;font-size:1.1rem;line-height:1;color:var(--green-d)}
+.month span{min-width:7.5em;text-align:center;font-weight:600}
+.rango{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:end;width:100%;padding-top:4px}
+.rango .campo{flex:1 1 130px}
+.bal{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px 10px;align-items:center;margin:14px 0 4px}
+.bal .bar{height:10px}
+.mini{display:grid;grid-template-columns:84px minmax(0,1fr);gap:14px;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.mini .ley div{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;font-size:.86rem;padding:2px 0}
+.suave{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:.84rem;color:var(--muted)}
+.suave div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;margin-top:6px}
+.suave .bar{grid-column:1/-1;height:4px}
+.suave .bar i{background:var(--gray)}
 .link{border:0;background:none;color:var(--green-d);font-weight:600;padding:6px 4px}
 
 main{padding-block:18px calc(96px + env(safe-area-inset-bottom,0px))}
@@ -175,8 +185,14 @@ nav.bottom button[aria-current="page"]{color:var(--green-d);background:var(--gre
       <button type="button" data-a="mes" data-d="-1" aria-label="Mes anterior">‹</button>
       <span id="mesLabel"></span>
       <button type="button" data-a="mes" data-d="1" aria-label="Mes siguiente">›</button>
+      <button class="link" type="button" id="rangoBtn" data-a="rangoAbrir">Fechas</button>
     </div>
     <button class="link" type="button" id="ajBtn" data-a="vista" data-v="ajustes" hidden>Ajustes</button>
+    <div class="rango" id="rangoBox" hidden>
+      <label class="campo"><span class="label">Del</span><input type="date" id="rg-de"></label>
+      <label class="campo"><span class="label">Al</span><input type="date" id="rg-a"></label>
+      <div class="acciones"><button class="btn chico" type="button" data-a="rangoAplicar">Ver periodo</button><button class="btn sec chico" type="button" data-a="rangoQuitar">Mes completo</button></div>
+    </div>
   </div>
 </header>
 
@@ -429,7 +445,7 @@ const PCATS=["Flores","Follaje","Materiales","Maderas","Estructura","Personal","
 const DEF_LUGARES=[["Villa de Patos","Súper","Casa"],["Tag","Transporte","Casa"],["Gasolina","Transporte","Casa"],["Uber Eats","Delivery","Casa"],["Rappi","Delivery","Casa"],["HBO","Suscripción","Personal"],["Claude","Suscripción","Trabajo"]].map((l,i)=>({id:"l"+(i+1),nombre:l[0],categoria:l[1],tipo:l[2],fav:true}));
 const T=(b,t)=>({banco:b,tipo:t});
 const SEMILLA={Daniel:{tarjetas:[T("BBVA","Crédito"),T("BBVA","Débito"),T("Nu","Crédito"),T("Nu","Débito"),T("Revolut","Débito")],limites:{Delivery:5000}},Merlina:{tarjetas:[T("BBVA","Débito"),T("BBVA","Crédito"),T("Revolut","Débito")],limites:{}}};
-const PAL=["#17A673","#7CD4AB","#0D7A55","#F08C8F","#B5E6CC","#8A979D","#4F5D63","#D6DEE0"];
+const PAL=["#17A673","#7CD4AB","#0D7A55","#B5E6CC","#8A979D","#4F5D63","#C4CED2","#DDE4E6"];
 const REP={no:"Una vez",semanal:"Cada semana",quincenal:"Cada 2 semanas",mensual:"Cada mes",anual:"Cada año"};
 
 const $=id=>document.getElementById(id);
@@ -458,7 +474,7 @@ const setRadio=(n,v)=>document.querySelectorAll('input[name="'+n+'"]').forEach(x
 const agrupar=(a,k)=>{const o={};a.forEach(x=>{const c=typeof k==="function"?k(x):x[k];o[c]=(o[c]||0)+(+x.monto||0)});return Object.keys(o).map(c=>({k:c,v:o[c]})).sort((x,y)=>y.v-x.v)};
 const nid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
-const S={mes:hoy().slice(0,7),vista:"gastos",sub:{gastos:"registrar",reporte:"mio",proyectos:"cot"},perfil:undefined,pv:0,pvHecho:-1,
+const S={rango:null,mes:hoy().slice(0,7),vista:"gastos",sub:{gastos:"registrar",reporte:"mio",proyectos:"cot"},perfil:undefined,pv:0,pvHecho:-1,
   gastos:[],ingresos:[],evM:[],evC:[],cots:[],proys:[],res:[],edit:{},drill:null,drillJ:null,cot:null,proy:null,proyCargado:null};
 let db=null,auth=null,usuario=null,uid=null,U=null,authLista=false,subs={},timer=null;
 
@@ -469,8 +485,14 @@ const tarjetas=()=>P().tarjetas||[];
 const limites=()=>P().limites||{};
 const metodos=()=>["Efectivo","Transferencia"].concat(tarjetas().map(t=>t.banco+" "+t.tipo));
 const col=n=>db.collection("usuarios/"+uid+"/"+n);
-const gm=()=>S.gastos.filter(g=>g.mes===S.mes).sort((a,b)=>a.fecha<b.fecha?1:a.fecha>b.fecha?-1:(b.creado||0)-(a.creado||0));
+const ordG=(a,b)=>a.fecha<b.fecha?1:a.fecha>b.fecha?-1:(b.creado||0)-(a.creado||0);
+const enP=f=>S.rango?f>=S.rango.de&&f<=S.rango.a:f.slice(0,7)===S.mes;
+const gmes=()=>S.gastos.filter(g=>g.mes===S.mes).sort(ordG);
+const gm=()=>S.rango?S.gastos.filter(g=>enP(g.fecha)).sort(ordG):gmes();
 const cobradosMes=m=>S.ingresos.filter(i=>i.estado==="cobrado"&&i.mes===m);
+const cobP=()=>S.ingresos.filter(i=>i.estado==="cobrado"&&enP(i.fecha));
+const pEn=()=>S.rango?(S.rango.de===S.rango.a?"el "+fCorta(S.rango.de):"del "+fCorta(S.rango.de)+" al "+fCorta(S.rango.a))+" de "+S.rango.a.slice(0,4):"en "+mesLargo(S.mes);
+const fechasP=()=>{const out=[];let d=fObj(S.rango?S.rango.de:S.mes+"-01");const fin=S.rango?S.rango.a:S.mes+"-"+p2(diasMes(S.mes));while(iso(d)<=fin&&out.length<124){out.push(iso(d));d=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1)}return out};
 
 let toastT=null;
 function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true},3200)}
@@ -487,7 +509,7 @@ const barra=(v,max,cls)=>'<div class="bar"><i class="'+(cls||"")+'" style="width
 function sub(k,q,fn){if(subs[k])subs[k]();subs[k]=q.onSnapshot(fn,e=>{if(e&&e.code==="permission-denied")aviso("Tu correo no tiene acceso a estos datos. Revisa que las reglas nuevas estén publicadas en Firebase.")})}
 const lista=s=>s.docs.map(d=>Object.assign({},d.data(),{id:d.id}));
 function subMes(){
-  sub("gastos",col("gastos").where("mes",">=",moverMes(S.mes,-5)).where("mes","<=",S.mes),s=>{S.gastos=lista(s);render()});
+  sub("gastos",col("gastos").where("mes",">=",(m=>S.rango&&S.rango.de.slice(0,7)<m?S.rango.de.slice(0,7):m)(moverMes(S.mes,-5))).where("mes","<=",S.mes),s=>{S.gastos=lista(s);render()});
   sub("res",db.collection("resumenes").where("mes","==",S.mes),s=>{S.res=lista(s);render()});
 }
 function iniciar(){
@@ -501,19 +523,21 @@ function iniciar(){
   sub("proys",col("proyectos"),s=>{S.proys=lista(s);render()});
   subMes();
 }
-function detener(){Object.keys(subs).forEach(k=>subs[k]());subs={};clearTimeout(timer);if(S.vista==="ajustes")S.vista="gastos";Object.assign(S,{sub:{gastos:"registrar",reporte:"mio",proyectos:"cot"},drill:null,drillJ:null,perfil:undefined,gastos:[],ingresos:[],evM:[],evC:[],cots:[],proys:[],res:[],edit:{},cot:null,proy:null});aviso("")}
+function detener(){Object.keys(subs).forEach(k=>subs[k]());subs={};clearTimeout(timer);if(S.vista==="ajustes")S.vista="gastos";Object.assign(S,{rango:null,sub:{gastos:"registrar",reporte:"mio",proyectos:"cot"},drill:null,drillJ:null,perfil:undefined,gastos:[],ingresos:[],evM:[],evC:[],cots:[],proys:[],res:[],edit:{},cot:null,proy:null});aviso("")}
 function guardarPerfil(c,msg){escribir(U.set(Object.assign({},P(),c)),msg)}
 
 /* ---------- render ---------- */
 const VISTAS=["cargando","login","quien","v-gastos","v-ingresos","v-calendario","v-reporte","v-proyectos","v-ajustes"];
-function ver(id,chrome){VISTAS.forEach(v=>{$(v).hidden=v!==id});$("nav").hidden=!chrome;$("ajBtn").hidden=!chrome;$("mesNav").hidden=!chrome||["gastos","ingresos","calendario","reporte"].indexOf(S.vista)<0}
+function ver(id,chrome){VISTAS.forEach(v=>{$(v).hidden=v!==id});$("nav").hidden=!chrome;$("ajBtn").hidden=!chrome;if(!chrome)$("rangoBox").hidden=true;$("mesNav").hidden=!chrome||["gastos","ingresos","calendario","reporte"].indexOf(S.vista)<0}
 function render(){
   if(!authLista)return ver("cargando");
   if(!usuario)return ver("login");
   if(S.perfil===undefined)return ver("cargando");
   if(S.perfil===null)return ver("quien");
   ver("v-"+S.vista,true);
-  $("mesLabel").textContent=mesLargo(S.mes);
+  const cal=S.vista==="calendario",ml=mesLargo(S.mes);
+  $("mesLabel").textContent=S.rango&&!cal?(S.rango.de===S.rango.a?fCorta(S.rango.de):fCorta(S.rango.de)+" – "+fCorta(S.rango.a)):ml.charAt(0).toUpperCase()+ml.slice(1);
+  $("rangoBtn").hidden=cal;if(cal||$("mesNav").hidden)$("rangoBox").hidden=true;
   document.querySelectorAll("#nav button").forEach(b=>{if(b.dataset.v===S.vista)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
   document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed",S.sub[b.dataset.v]===b.dataset.s?"true":"false"));
   if(S.pvHecho!==S.pv){S.pvHecho=S.pv;syncForms()}
@@ -525,7 +549,6 @@ function syncForms(){
   const f=lugares().filter(l=>l.fav);
   $("g-favbox").hidden=!f.length;
   $("g-favs").innerHTML=f.map(l=>'<button type="button" class="favb" data-a="fav" data-id="'+esc(l.id)+'">★ '+esc(l.nombre)+"</button>").join("");
-  $("dl-lugares").innerHTML=lugares().map(l=>'<option value="'+esc(l.nombre)+'"></option>').join("");
   $("dl-pcats").innerHTML=PCATS.map(c=>'<option value="'+esc(c)+'"></option>').join("");
   if(!$("g-tipos").children.length)$("g-tipos").innerHTML=TIPOS.map((t,i)=>'<label class="chip"><input type="radio" name="g-tipo" id="g-tipo-'+i+'" value="'+t+'"'+(i===0?" checked":"")+"><span>"+t+"</span></label>").join("");
 }
@@ -536,6 +559,12 @@ function filaG(g,quien){
   const s=[g.categoria,g.tipo,g.metodo,quien].filter(Boolean).join(" · ")+(g.lugar&&g.nota?" · "+g.nota:"");
   return '<button type="button" class="row" data-a="editG" data-id="'+esc(g.id)+'"><span class="t">'+esc(g.lugar||g.nota||g.categoria)+'</span><span class="m">'+fmt(g.monto)+'</span><span class="s">'+esc(s)+"</span></button>";
 }
+let dlPrev="";
+function dlLugares(){const h=Array.from(new Set(lugares().map(l=>l.nombre).concat(S.gastos.map(g=>g.lugar)).filter(Boolean))).sort((a,b)=>a.localeCompare(b,"es")).map(n=>'<option value="'+esc(n)+'"></option>').join("");if(h!==dlPrev){dlPrev=h;$("dl-lugares").innerHTML=h}}
+function limsSuave(g){
+  const L=limites(),ks=Object.keys(L);if(!ks.length)return "";
+  return '<div class="suave">Límites del mes'+ks.map(c=>{const v=sum(g.filter(x=>x.categoria===c)),l=L[c];return "<div><span>"+esc(c)+(v>l?" · "+fmt0(v-l)+" arriba del límite":"")+'</span><span class="num">'+fmt0(v)+" de "+fmt0(l)+"</span>"+barra(v,l)+"</div>"}).join("")+"</div>";
+}
 function limsHTML(g,soloCon){
   const L=limites(),ks=Object.keys(L);
   if(!ks.length)return soloCon?"":vacio("Sin límites. Agrégalos en Ajustes.");
@@ -543,18 +572,20 @@ function limsHTML(g,soloCon){
     return '<div class="linea"><b>'+esc(c)+'</b><span class="num '+(over?"bad":"")+'">'+fmt(v)+" <small>de "+fmt(l)+"</small></span>"+barra(v,l,over?"r":"")+'<small style="grid-column:1/-1" class="'+(over?"bad":"")+'">'+(over?"Te pasaste por "+fmt(v-l):"Te quedan "+fmt(l-v))+"</small></div>"}).join("");
 }
 R.gastos=()=>{
+  dlLugares();
   const reg=S.sub.gastos==="registrar";$("g-registrar").hidden=!reg;$("g-movs").hidden=reg;
   const g=gm();
   if(reg){
-    const ing=sum(cobradosMes(S.mes)),t=sum(g);
-    $("g-resumen").innerHTML='<div class="label">Gastado en '+esc(mesLargo(S.mes))+'</div><div class="total">'+fmt(t)+'</div><p class="muted num" style="margin:4px 0 12px">'+g.length+(g.length===1?" gasto":" gastos")+(ing?" · cobrado "+fmt(ing):"")+"</p>"+limsHTML(g,true);
+    const ing=sum(cobP()),t=sum(g),bal=ing-t,mx=Math.max(ing,t),pc=agrupar(g,"categoria"),top=pc.slice(0,4),resto=pc.slice(4);
+    if(resto.length)top.push({k:"Otras",v:sum(resto,"v")});
+    $("g-resumen").innerHTML='<div class="label">Balance '+esc(pEn())+'</div><div class="total'+(bal>=0?" ok":"")+'">'+fmt(bal)+'</div><p class="muted" style="margin:4px 0 0">'+(ing||t?(bal>=0?"Te queda esto después de tus gastos.":"Gastaste "+fmt(-bal)+" más de lo que cobraste."):"Aún no hay movimientos.")+'</p><div class="bal num"><span>Cobrado</span>'+barra(ing,mx)+'<b class="ok">'+fmt(ing)+'</b><span>Gastado</span>'+barra(t,mx,"g")+"<b>"+fmt(t)+'</b></div><p class="muted num" style="margin:0">'+g.length+(g.length===1?" gasto":" gastos")+"</p>"+(top.length?'<div class="mini">'+dona(top,t)+'<div class="ley">'+top.map((x,i)=>'<div><i style="background:'+PAL[Math.min(i,PAL.length-1)]+'"></i><span>'+esc(x.k)+'</span><span class="num muted">'+pct(x.v,t)+"%</span></div>").join("")+"</div></div>":"")+limsSuave(gmes());
     const h=hoy(),l=g.filter(x=>x.fecha===h);
-    $("g-hoy").innerHTML=l.length?l.map(x=>filaG(x)).join("")+'<p class="muted num" style="margin:10px 0 0">Total de hoy: '+fmt(sum(l))+"</p>":vacio(S.mes===h.slice(0,7)?"Aún no registras gastos hoy.":"Estás viendo otro mes.");
+    $("g-hoy").innerHTML=l.length?l.map(x=>filaG(x)).join("")+'<p class="muted num" style="margin:10px 0 0">Total de hoy: '+fmt(sum(l))+"</p>":vacio(enP(h)?"Aún no registras gastos hoy.":"Hoy queda fuera del periodo que estás viendo.");
   }else{
     const cs=Array.from(new Set(cats().concat(g.map(x=>x.categoria)))),v=$("m-cat").value;
     $("m-cat").innerHTML='<option value="">Todas las categorías</option>'+cs.map(c=>"<option"+(c===v?" selected":"")+">"+esc(c)+"</option>").join("");
     const tp=$("m-tipo").value,l=g.filter(x=>(!v||x.categoria===v)&&(!tp||x.tipo===tp));
-    if(!l.length){$("m-lista").innerHTML=vacio("No hay gastos con estos filtros en "+mesLargo(S.mes)+".");return}
+    if(!l.length){$("m-lista").innerHTML=vacio("No hay gastos con estos filtros "+pEn()+".");return}
     let h="",f="";
     l.forEach(x=>{if(x.fecha!==f){f=x.fecha;h+='<div class="dia-h"><span class="label">'+esc(fLarga(f))+'</span><span class="num muted">'+fmt(sum(l.filter(y=>y.fecha===f)))+"</span></div>"}h+=filaG(x)});
     $("m-lista").innerHTML=h+'<p class="muted num" style="margin:14px 0 0">'+l.length+(l.length===1?" gasto":" gastos")+" · "+fmt(sum(l))+"</p>";
@@ -571,9 +602,10 @@ $("gForm").addEventListener("submit",e=>{e.preventDefault();
   if(!/^\d{4}-\d{2}-\d{2}$/.test(d.fecha))return toast("Elige la fecha del gasto.");
   d.mes=d.fecha.slice(0,7);const prev=S.gastos.find(x=>x.id===S.edit.gasto);d.creado=prev?prev.creado||Date.now():Date.now();
   const ref=S.edit.gasto?col("gastos").doc(S.edit.gasto):col("gastos").doc();
+  if(d.lugar&&!lugares().some(x=>x.nombre.toLowerCase()===d.lugar.toLowerCase()))guardarPerfil({lugares:lugares().concat([{id:"l"+nid(),nombre:d.lugar,categoria:d.categoria,tipo:d.tipo,fav:false}])});
   escribir(ref.set(d),S.edit.gasto?"Cambios guardados":"Gasto guardado: "+fmt(d.monto),limpiarG);
 });
-$("g-lugar").addEventListener("change",()=>{const v=$("g-lugar").value.trim().toLowerCase(),l=lugares().find(x=>x.nombre.toLowerCase()===v);if(l)aplicarLugar(l)});
+$("g-lugar").addEventListener("change",()=>{const v=$("g-lugar").value.trim().toLowerCase();if(!v)return;const l=lugares().find(x=>x.nombre.toLowerCase()===v),g=l?null:S.gastos.slice().sort(ordG).find(x=>(x.lugar||"").toLowerCase()===v);if(l)aplicarLugar(l);else if(g){fill($("g-cat"),cats(),g.categoria);setRadio("g-tipo",TIPOS.includes(g.tipo)?g.tipo:"Casa")}});
 ["m-cat","m-tipo"].forEach(i=>$(i).addEventListener("change",render));
 
 /* ---------- ingresos ---------- */
@@ -586,12 +618,12 @@ R.ingresos=()=>{
   $("dl-clientes").innerHTML=Array.from(new Set(S.ingresos.map(i=>i.cliente).concat(S.proys.map(p=>p.cliente)).filter(Boolean))).map(c=>'<option value="'+esc(c)+'"></option>').join("");
   const sel=$("i-proy"),v=sel.value;sel.innerHTML='<option value="">Sin proyecto</option>'+S.proys.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===v?" selected":"")+">"+esc(p.nombre)+"</option>").join("");
   $("i-fechal").textContent=radio("i-est")==="cobrado"?"Fecha de pago":"Fecha esperada";
-  const cob=cobradosMes(S.mes).sort((a,b)=>a.fecha<b.fecha?1:-1),pen=S.ingresos.filter(i=>i.estado==="por_cobrar").sort((a,b)=>a.fecha<b.fecha?-1:1);
+  const cob=cobP().sort((a,b)=>a.fecha<b.fecha?1:-1),pen=S.ingresos.filter(i=>i.estado==="por_cobrar").sort((a,b)=>a.fecha<b.fecha?-1:1);
   const tc=sum(cob),tp=sum(pen),pc=agrupar(cob,"cliente");
-  $("i-resumen").innerHTML='<div class="kpis" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div><span class="label">Cobrado en '+esc(mesCorto(S.mes))+'</span><b class="ok">'+fmt(tc)+'</b></div><div><span class="label">Por cobrar</span><b>'+fmt(tp)+"</b></div></div>"+(pc.length?"<h3>Quién te pagó este mes</h3>"+pc.map(x=>'<div class="linea"><b>'+esc(x.k||"Sin cliente")+'</b><span class="num">'+fmt(x.v)+" <small>"+pct(x.v,tc)+"%</small></span>"+barra(x.v,pc[0].v)+"</div>").join(""):"");
+  $("i-resumen").innerHTML='<div class="kpis" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div><span class="label">Cobrado</span><b class="ok">'+fmt(tc)+'</b></div><div><span class="label">Por cobrar</span><b>'+fmt(tp)+"</b></div></div>"+(pc.length?"<h3>Quién te pagó</h3>"+pc.map(x=>'<div class="linea"><b>'+esc(x.k||"Sin cliente")+'</b><span class="num">'+fmt(x.v)+" <small>"+pct(x.v,tc)+"%</small></span>"+barra(x.v,pc[0].v)+"</div>").join(""):"");
   $("i-pend").innerHTML=pen.length?pen.map(i=>filaI(i,true)).join(""):vacio("No tienes cobros pendientes.");
-  $("i-cobt").textContent="Cobrado en "+mesLargo(S.mes);
-  $("i-cob").innerHTML=cob.length?cob.map(i=>filaI(i)).join(""):vacio("Sin ingresos cobrados este mes.");
+  $("i-cobt").textContent="Cobrado "+pEn();
+  $("i-cob").innerHTML=cob.length?cob.map(i=>filaI(i)).join(""):vacio("Sin ingresos cobrados en este periodo.");
 };
 function limpiarI(){S.edit.ingreso=null;["i-monto","i-cliente","i-concepto"].forEach(i=>{$(i).value=""});$("i-fecha").value=hoy();$("i-proy").value="";setRadio("i-est","cobrado");$("i-titulo").textContent="Nuevo ingreso";$("i-guardar").textContent="Guardar ingreso";$("i-cancelar").hidden=$("i-borrar").hidden=true;reset($("i-borrar"))}
 function cargarI(i,nuevo){S.edit.ingreso=nuevo?null:i.id;S.vista="ingresos";render();
@@ -659,40 +691,40 @@ function dona(datos,total){
   datos.forEach((x,i)=>{const p=total?x.v/total*100:0;c+='<circle cx="21" cy="21" r="15.915" fill="none" stroke="'+PAL[Math.min(i,PAL.length-1)]+'" stroke-width="6" stroke-dasharray="'+p.toFixed(2)+" "+(100-p).toFixed(2)+'" stroke-dashoffset="'+(25-acc).toFixed(2)+'"/>';acc+=p});
   return '<svg viewBox="0 0 42 42" role="img" aria-label="Gasto por categoría"><circle cx="21" cy="21" r="15.915" fill="none" stroke="#E2E9E4" stroke-width="6"/>'+c+"</svg>";
 }
-function miResumen(){const g=gm();return {uid,mes:S.mes,nombre:P().nombre||"",actualizado:Date.now(),total:Math.round(sum(g)*100)/100,n:g.length,gastos:g.map(x=>({f:x.fecha,m:x.monto,c:x.categoria,t:x.tipo,l:x.lugar||"",n:x.nota||"",me:x.metodo||""}))}}
+function miResumen(){const g=gmes();return {uid,mes:S.mes,nombre:P().nombre||"",actualizado:Date.now(),total:Math.round(sum(g)*100)/100,n:g.length,gastos:g.map(x=>({f:x.fecha,m:x.monto,c:x.categoria,t:x.tipo,l:x.lugar||"",n:x.nota||"",me:x.metodo||""}))}}
 R.reporte=()=>{
   const mio=S.sub.reporte==="mio";$("r-mio").hidden=!mio;$("r-juntos").hidden=mio;
   if(!mio)return juntos();
-  const g=gm(),t=sum(g),ing=sum(cobradosMes(S.mes)),bal=ing-t,actual=S.mes===hoy().slice(0,7),n=diasMes(S.mes);
+  const g=gm(),t=sum(g),ing=sum(cobP()),bal=ing-t,actual=!S.rango&&S.mes===hoy().slice(0,7),fs=fechasP(),n=fs.length;
   $("r-kpi").innerHTML='<div><span class="label">Ingresos</span><b class="ok">'+fmt0(ing)+'</b></div><div><span class="label">Gastos</span><b>'+fmt0(t)+'</b></div><div><span class="label">Balance</span><b class="'+(bal<0?"bad":"ok")+'">'+fmt0(bal)+"</b></div>";
   const porCat=agrupar(g,"categoria"),ins=[];
-  if(!g.length&&!ing)ins.push(["","Aún no hay movimientos en "+mesLargo(S.mes)+"."]);
+  if(!g.length&&!ing)ins.push(["","Aún no hay movimientos "+pEn()+"."]);
   else{
-    if(ing||t)ins.push(bal>=0?["","Cobraste "+fmt(ing)+" y gastaste "+fmt(t)+": te quedan "+fmt(bal)+"."]:["r","Gastaste "+fmt(-bal)+" más de lo que cobraste este mes."]);
+    if(ing||t)ins.push(bal>=0?["","Cobraste "+fmt(ing)+" y gastaste "+fmt(t)+": te quedan "+fmt(bal)+"."]:["r","Gastaste "+fmt(-bal)+" más de lo que cobraste "+pEn()+"."]);
     if(porCat.length)ins.push(["","Tu gasto más grande es "+porCat[0].k+": "+fmt(porCat[0].v)+", el "+pct(porCat[0].v,t)+"% del total."]);
     const ant=moverMes(S.mes,-1),ta=sum(S.gastos.filter(x=>x.mes===ant));
-    if(ta&&t){if(actual)ins.push(["","Llevas "+fmt(t)+"; en todo "+mesLargo(ant)+" gastaste "+fmt(ta)+"."]);else{const d=pct(t-ta,ta);ins.push([d>0?"r":"","Gastaste "+Math.abs(d)+"% "+(d>0?"más":"menos")+" que en "+mesLargo(ant)+" ("+fmt(ta)+")."])}}
+    if(ta&&t&&!S.rango){if(actual)ins.push(["","Llevas "+fmt(t)+"; en todo "+mesLargo(ant)+" gastaste "+fmt(ta)+"."]);else{const d=pct(t-ta,ta);ins.push([d>0?"r":"","Gastaste "+Math.abs(d)+"% "+(d>0?"más":"menos")+" que en "+mesLargo(ant)+" ("+fmt(ta)+")."])}}
     if(actual&&t){const dd=new Date().getDate();ins.push(["","Vas en "+fmt(t/dd)+" por día en promedio."])}
-    const L=limites();Object.keys(L).forEach(c=>{const v=sum(g.filter(x=>x.categoria===c));if(v>L[c])ins.push(["r","Pasaste el límite de "+c+" por "+fmt(v-L[c])+"."])});
+    if(S.rango&&t&&n>1)ins.push(["","En estos "+n+" días gastaste "+fmt(t/n)+" por día en promedio."]);
+    if(!S.rango){const L=limites();Object.keys(L).forEach(c=>{const v=sum(g.filter(x=>x.categoria===c));if(v>L[c])ins.push(["r","Pasaste el límite de "+c+" por "+fmt(v-L[c])+"."])})}
     const pd=agrupar(g,"fecha");if(pd.length>1)ins.push(["","Tu día más caro fue el "+fCorta(pd[0].k)+": "+fmt(pd[0].v)+"."]);
   }
   $("r-ins").innerHTML=ins.map(x=>'<li class="'+x[0]+'">'+esc(x[1])+"</li>").join("");
   const top=porCat.slice(0,7),resto=porCat.slice(7);if(resto.length)top.push({k:"Otras categorías",v:sum(resto,"v"),otras:true});
-  $("r-dona").innerHTML=porCat.length?'<div class="dona">'+dona(top,t)+'<div class="ley">'+top.map((x,i)=>'<button type="button" data-a="drill" data-c="'+esc(x.otras?"":x.k)+'"'+(x.otras?" disabled":"")+'><i style="background:'+PAL[Math.min(i,PAL.length-1)]+'"></i><span>'+esc(x.k)+'</span><span class="num"><b>'+fmt(x.v)+"</b> <small class=\"muted\">"+pct(x.v,t)+"%</small></span></button>").join("")+"</div></div>"+(resto.length?'<p class="muted" style="margin:10px 0 0">Otras: '+esc(resto.map(x=>x.k+" "+fmt(x.v)).join(" · "))+"</p>":"")+'<p class="muted" style="margin:8px 0 0">Toca una categoría para ver sus gastos.</p>':vacio("Sin gastos este mes.");
+  $("r-dona").innerHTML=porCat.length?'<div class="dona">'+dona(top,t)+'<div class="ley">'+top.map((x,i)=>'<button type="button" data-a="drill" data-c="'+esc(x.otras?"":x.k)+'"'+(x.otras?" disabled":"")+'><i style="background:'+PAL[Math.min(i,PAL.length-1)]+'"></i><span>'+esc(x.k)+'</span><span class="num"><b>'+fmt(x.v)+"</b> <small class=\"muted\">"+pct(x.v,t)+"%</small></span></button>").join("")+"</div></div>"+(resto.length?'<p class="muted" style="margin:10px 0 0">Otras: '+esc(resto.map(x=>x.k+" "+fmt(x.v)).join(" · "))+"</p>":"")+'<p class="muted" style="margin:8px 0 0">Toca una categoría para ver sus gastos.</p>':vacio("Sin gastos en este periodo.");
   const dr=S.drill&&g.filter(x=>x.categoria===S.drill);
   $("r-drill").innerHTML=dr&&dr.length?"<h3>"+esc(S.drill)+" · "+fmt(sum(dr))+"</h3>"+dr.map(x=>filaG(x)).join(""):"";
-  $("r-lims").innerHTML=limsHTML(g);
+  $("r-lims").innerHTML=(S.rango?'<p class="muted" style="margin-top:0">Los límites son mensuales: se muestran con todo '+esc(mesLargo(S.mes))+".</p>":"")+limsHTML(gmes());
   const meses=[];for(let i=5;i>=0;i--)meses.push(moverMes(S.mes,-i));
   const serie=meses.map(m=>({m,i:sum(cobradosMes(m)),g:sum(S.gastos.filter(x=>x.mes===m))})),mx=Math.max.apply(null,serie.map(x=>Math.max(x.i,x.g)));
   $("r-trend").innerHTML=mx>0?'<div class="trend" role="img" aria-label="Ingresos y gastos por mes">'+serie.map(x=>'<div class="m" title="'+esc(mesLargo(x.m))+": ingresos "+fmt(x.i)+", gastos "+fmt(x.g)+'"><i style="height:'+(x.i/mx*100).toFixed(1)+'%"></i><i class="g" style="height:'+(x.g/mx*100).toFixed(1)+'%"></i></div>').join("")+'</div><div class="trendl">'+serie.map(x=>"<span>"+esc(mesCorto(x.m))+"</span>").join("")+'</div><p class="muted" style="margin:10px 0 0"><span class="pill">Ingresos</span> <span class="pill r">Gastos</span> · El más alto: '+fmt(mx)+"</p>":vacio("Aún no hay datos para comparar.");
-  const dias=Array(n).fill(0);g.forEach(x=>{const d=+x.fecha.slice(8,10);if(d>=1&&d<=n)dias[d-1]+=x.monto});
-  const dmax=Math.max.apply(null,dias),hd=actual?new Date().getDate():0;
-  $("r-dias").innerHTML=dmax>0?'<div class="label num" style="margin-bottom:6px">Día más alto: '+fmt(dmax)+'</div><div class="dias" role="img" aria-label="Gasto de cada día">'+dias.map((v,k)=>'<div class="'+(k+1===hd?"hoy":"")+'" style="height:'+(v/dmax*100).toFixed(1)+'%" title="Día '+(k+1)+": "+fmt(v)+'"></div>').join("")+'</div><div class="ejes num"><span>1</span><span>'+Math.round(n/2)+"</span><span>"+n+"</span></div>":vacio("Sin gastos este mes.");
-  const lin=a=>a.length?a.map(x=>'<div class="linea"><b>'+esc(x.k||"Sin especificar")+'</b><span class="num"><b>'+fmt(x.v)+"</b> <small>"+pct(x.v,t)+"%</small></span>"+barra(x.v,a[0].v)+"</div>").join(""):vacio("Sin gastos este mes.");
+  const dias=fs.map(f=>sum(g.filter(x=>x.fecha===f))),dmax=Math.max.apply(null,dias.concat([0])),hf=hoy();
+  $("r-dias").innerHTML=dmax>0?'<div class="label num" style="margin-bottom:6px">Día más alto: '+fmt(dmax)+'</div><div class="dias" role="img" aria-label="Gasto de cada día">'+dias.map((v,k)=>'<div class="'+(fs[k]===hf?"hoy":"")+'" style="height:'+(v/dmax*100).toFixed(1)+'%" title="'+esc(fCorta(fs[k]))+": "+fmt(v)+'"></div>').join("")+'</div><div class="ejes num"><span>'+esc(fCorta(fs[0]))+"</span><span>"+esc(fCorta(fs[n-1]))+"</span></div>":vacio("Sin gastos en este periodo.");
+  const lin=a=>a.length?a.map(x=>'<div class="linea"><b>'+esc(x.k||"Sin especificar")+'</b><span class="num"><b>'+fmt(x.v)+"</b> <small>"+pct(x.v,t)+"%</small></span>"+barra(x.v,a[0].v)+"</div>").join(""):vacio("Sin gastos en este periodo.");
   $("r-tipos").innerHTML=lin(agrupar(g,"tipo"));$("r-mets").innerHTML=lin(agrupar(g,"metodo"));
-  const mi=S.res.find(r=>r.uid===uid),cambio=mi&&(mi.n!==g.length||Math.abs(mi.total-t)>0.005);
+  const gM=gmes(),mi=S.res.find(r=>r.uid===uid),cambio=mi&&(mi.n!==gM.length||Math.abs(mi.total-sum(gM))>0.005);
   $("r-comp").textContent=mi?(cambio?"Tu resumen compartido de "+mesLargo(S.mes)+" ya no coincide con tus gastos. Actualízalo para que se vea al día.":"Tu resumen de "+mesLargo(S.mes)+" está compartido. Se ve en la pestaña Juntos."):"Tus gastos son privados. Al compartir, tu pareja verá los totales por categoría y los gastos de "+mesLargo(S.mes)+". Tus ingresos no se comparten.";
-  $("r-compb").textContent=mi?"Actualizar mi resumen":"Compartir mi resumen";$("r-descb").hidden=!mi;$("r-compb").disabled=!g.length;
+  $("r-compb").textContent=mi?"Actualizar mi resumen":"Compartir mi resumen";$("r-descb").hidden=!mi;$("r-compb").disabled=!gM.length;
   $("r-excel").disabled=typeof XLSX==="undefined"||(!g.length&&!ing);
 };
 function juntos(){
@@ -712,8 +744,8 @@ function juntos(){
 }
 function excel(){
   if(typeof XLSX==="undefined")return;
-  const g=gm().slice().reverse(),ing=cobradosMes(S.mes),t=sum(g),ti=sum(ing);
-  const res=[["Resumen de "+mesLargo(S.mes)+" · "+(P().nombre||"")],[],["Ingresos cobrados",ti],["Gastos",t],["Balance",ti-t],[],["Por categoría","Monto","% del total"]];
+  const g=gm().slice().reverse(),ing=cobP(),t=sum(g),ti=sum(ing);
+  const res=[["Resumen "+pEn()+" · "+(P().nombre||"")],[],["Ingresos cobrados",ti],["Gastos",t],["Balance",ti-t],[],["Por categoría","Monto","% del total"]];
   agrupar(g,"categoria").forEach(x=>res.push([x.k,x.v,t?Math.round(x.v/t*1000)/10:0]));
   res.push([],["Casa, personal y trabajo","Monto"]);agrupar(g,"tipo").forEach(x=>res.push([x.k,x.v]));
   res.push([],["Forma de pago","Monto"]);agrupar(g,"metodo").forEach(x=>res.push([x.k,x.v]));
@@ -721,7 +753,7 @@ function excel(){
   hoja("Resumen",res,[28,16,14]);
   hoja("Gastos",[["Fecha","Gasto de","Categoría","Lugar o concepto","Nota","Forma de pago","Monto"]].concat(g.map(x=>[x.fecha,x.tipo,x.categoria,x.lugar,x.nota,x.metodo,x.monto]),[[],["","","","","","Total",t]]),[12,12,22,30,26,18,12]);
   hoja("Ingresos",[["Fecha","Cliente","Concepto","Forma de pago","Proyecto","Monto"]].concat(ing.map(x=>[x.fecha,x.cliente,x.concepto,x.metodo,proyNombre(x.proyecto),x.monto]),[[],["","","","","Total",ti]]),[12,24,30,18,24,12]);
-  try{XLSX.writeFile(wb,"mi-mes-"+S.mes+".xlsx");toast("Reporte generado")}catch(e){toast("No se pudo generar el reporte.")}
+  try{XLSX.writeFile(wb,S.rango?"gastos-"+S.rango.de+"-a-"+S.rango.a+".xlsx":"mi-mes-"+S.mes+".xlsx");toast("Reporte generado")}catch(e){toast("No se pudo generar el reporte.")}
 }
 
 /* ---------- cotizador y proyectos ---------- */
@@ -794,7 +826,10 @@ $("imp-file").addEventListener("change",e=>{const f=e.target.files[0];if(!f)retu
 const A={
   vista:b=>{S.vista=b.dataset.v;guardarLocal("vista",S.vista);render();window.scrollTo(0,0)},
   sub:b=>{S.sub[b.dataset.v]=b.dataset.s;render()},
-  mes:b=>{S.mes=moverMes(S.mes,+b.dataset.d);S.drill=S.drillJ=null;subMes();render()},
+  mes:b=>{S.rango=null;$("rangoBox").hidden=true;S.mes=moverMes(S.mes,+b.dataset.d);S.drill=S.drillJ=null;subMes();render()},
+  rangoAbrir:()=>{const x=$("rangoBox");x.hidden=!x.hidden;if(!x.hidden){const h=hoy();$("rg-de").value=S.rango?S.rango.de:S.mes+"-01";$("rg-a").value=S.rango?S.rango.a:(S.mes===h.slice(0,7)?h:S.mes+"-"+p2(diasMes(S.mes)))}},
+  rangoAplicar:()=>{const de=$("rg-de").value,a=$("rg-a").value,ok=/^\d{4}-\d{2}-\d{2}$/;if(!ok.test(de)||!ok.test(a))return toast("Elige las dos fechas.");if(de>a)return toast("La primera fecha debe ser anterior a la segunda.");S.rango={de,a};S.mes=a.slice(0,7);S.drill=S.drillJ=null;$("rangoBox").hidden=true;subMes();render()},
+  rangoQuitar:()=>{S.rango=null;$("rangoBox").hidden=true;S.drill=null;subMes();render()},
   soy:b=>{const n=b.dataset.n,s=SEMILLA[n]||{tarjetas:[],limites:{}};escribir(U.set({nombre:n,categorias:DEF_CATS,lugares:DEF_LUGARES,tarjetas:s.tarjetas,limites:s.limites}))},
   fav:b=>{const l=lugares().find(x=>x.id===b.dataset.id);if(l)aplicarLugar(l,true)},
   editG:b=>cargarG(b.dataset.id),cancelG:()=>{limpiarG();render()},
