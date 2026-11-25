@@ -128,6 +128,13 @@ button.row:hover .t{text-decoration:underline}
 .evr:first-child{border-top:0}
 .evr>div:first-child{flex:1 1 200px;min-width:0}
 .evr .s{font-size:.86rem;color:var(--muted)}
+.drill{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
+.drill-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 12px;margin-bottom:4px}
+.drill-h h3{margin:0;font-size:1rem}
+button.linea.grp[aria-expanded="true"]>b{color:var(--green-d)}
+button.linea[aria-pressed="true"]>b{color:var(--green-d)}
+.grp-items{margin:0 0 8px 6px;padding-left:12px;border-left:2px solid var(--green-s)}
+.ley button[aria-pressed="true"] span{color:var(--green-d);font-weight:600}
 .ley i{width:10px;height:10px;border-radius:3px;display:block}
 .dias{display:flex;align-items:flex-end;gap:2px;height:110px;border-bottom:1px solid var(--line)}
 .dias div{flex:1;min-width:0;background:var(--green);border-radius:3px 3px 0 0}
@@ -260,7 +267,8 @@ nav.bottom button[aria-current="page"]{color:var(--green-d);background:var(--gre
           <div class="campo"><label class="label" for="i-monto">Monto</label><div class="monto"><span id="i-sim">$</span><input id="i-monto" inputmode="decimal" placeholder="0.00" autocomplete="off"></div><small class="muted num" id="i-estim" hidden></small></div>
           <div class="campo"><span class="label" id="i-monl">Moneda</span><div class="chips" role="radiogroup" aria-labelledby="i-monl">
             <label class="chip"><input type="radio" name="i-mon" id="i-mon-m" value="MXN" checked><span>Pesos</span></label>
-            <label class="chip"><input type="radio" name="i-mon" id="i-mon-u" value="USD"><span>Dólares</span></label></div></div>
+            <label class="chip"><input type="radio" name="i-mon" id="i-mon-u" value="USD"><span>Dólares</span></label>
+            <label class="chip"><input type="radio" name="i-mon" id="i-mon-e" value="EUR"><span>Euros</span></label></div></div>
           <label class="campo" id="i-mxnbox" hidden><span class="label">Pesos que recibiste</span><input id="i-mxn" inputmode="decimal" placeholder="Lo que llegó a tu cuenta" autocomplete="off"></label>
           <div class="fila">
             <label class="campo"><span class="label">Cliente</span><input id="i-cliente" list="dl-clientes" maxlength="60" autocomplete="off"></label>
@@ -415,8 +423,8 @@ nav.bottom button[aria-current="page"]{color:var(--green-d);background:var(--gre
         <div class="panel"><h2>Lugares frecuentes y favoritos</h2><p class="muted" style="margin-top:0">Los marcados con ★ aparecen como botones al registrar un gasto.</p><div id="a-lugares"></div>
           <form id="lugForm" class="f" style="margin-top:14px"><label class="campo"><span class="label">Nuevo lugar</span><input id="lug-nombre" maxlength="60" autocomplete="off"></label><div class="fila"><label class="campo"><span class="label">Categoría</span><select id="lug-cat"></select></label><label class="campo"><span class="label">Gasto de</span><select id="lug-tipo"><option>Casa</option><option>Personal</option><option>Trabajo</option></select></label></div><label class="check"><input type="checkbox" id="lug-fav" checked> Mostrar en favoritos</label><div class="acciones"><button class="btn" type="submit">Agregar lugar</button></div></form></div>
         <div class="panel"><h2>Importar desde archivo</h2><p class="muted" style="margin-top:0">Carga gastos e ingresos desde un archivo de importación (.json). Volver a cargar el mismo archivo no duplica nada.</p><input type="file" id="imp-file" accept=".json,application/json" class="in"></div>
-        <div class="panel"><h2>Tipo de cambio del dólar</h2><p class="muted" style="margin-top:0">Se usa solo para estimar en pesos tus cobros pendientes en dólares. Al cobrar, registras los pesos que de verdad recibiste.</p>
-          <form id="tcForm" class="f"><label class="campo" style="max-width:220px"><span class="label">Pesos por dólar</span><input id="a-tc" inputmode="decimal" autocomplete="off"></label><div class="acciones"><button class="btn" type="submit">Guardar tipo de cambio</button></div></form></div>
+        <div class="panel"><h2>Tipo de cambio</h2><p class="muted" style="margin-top:0">Se usa solo para estimar en pesos tus cobros pendientes en dólares o euros. Al cobrar, registras los pesos que de verdad recibiste.</p>
+          <form id="tcForm" class="f"><div class="fila"><label class="campo"><span class="label">Pesos por dólar</span><input id="a-tc" inputmode="decimal" autocomplete="off"></label><label class="campo"><span class="label">Pesos por euro</span><input id="a-tce" inputmode="decimal" autocomplete="off"></label></div><div class="acciones"><button class="btn" type="submit">Guardar tipo de cambio</button></div></form></div>
         <div class="panel"><h2>Mi cuenta</h2><p class="muted" id="a-cuenta" style="margin-top:0"></p><button class="btn sec" type="button" data-a="salir">Cerrar sesión</button></div>
       </div>
     </div>
@@ -522,9 +530,12 @@ function subMes(){
   sub("res",db.collection("resumenes").where("mes","==",S.mes),s=>{S.res=lista(s);render()});
 }
 const tc=()=>+P().tc>0?+P().tc:18.35;
-const esUSD=i=>i.moneda==="USD";
-const fUSD=n=>"USD "+(+n||0).toLocaleString("es-MX",{minimumFractionDigits:2,maximumFractionDigits:2});
-function normIng(){S.ingresos=S.ingRaw.map(i=>esUSD(i)&&i.estado==="por_cobrar"?Object.assign({},i,{monto:Math.round((+i.usd||0)*tc()*100)/100}):i)}
+const MON={USD:{sim:"US$",nom:"dólar",k:"tc",def:18.35},EUR:{sim:"€",nom:"euro",k:"tcEur",def:21.5}};
+const tcDe=m=>MON[m]?(+P()[MON[m].k]>0?+P()[MON[m].k]:MON[m].def):1;
+const esUSD=i=>!!MON[i.moneda];
+const ext=i=>+(i.ext!=null?i.ext:i.usd)||0;
+const fExt=i=>i.moneda+" "+ext(i).toLocaleString("es-MX",{minimumFractionDigits:2,maximumFractionDigits:2});
+function normIng(){S.ingresos=S.ingRaw.map(i=>esUSD(i)&&i.estado==="por_cobrar"?Object.assign({},i,{monto:Math.round(ext(i)*tcDe(i.moneda)*100)/100}):i)}
 function iniciar(){
   U=db.doc("usuarios/"+uid);
   timer=setTimeout(()=>{if(S.perfil===undefined)aviso("Todavía no se puede conectar con tu libreta. Revisa tu internet.")},10000);
@@ -558,7 +569,8 @@ function render(){
 }
 function syncForms(){
   fill($("g-cat"),cats());fill($("lug-cat"),cats());fill($("l-cat"),cats());
-  if(document.activeElement!==$("a-tc"))$("a-tc").value=tc();
+  if(document.activeElement!==$("a-tc"))$("a-tc").value=tcDe("USD");
+  if(document.activeElement!==$("a-tce"))$("a-tce").value=tcDe("EUR");
   ["g-met","i-met","pg-met"].forEach(id=>fill($(id),metodos()));
   const f=lugares().filter(l=>l.fav);
   $("g-favbox").hidden=!f.length;
@@ -577,10 +589,22 @@ const pend=()=>S.ingresos.filter(i=>i.estado==="por_cobrar");
 const cap=t=>t.charAt(0).toUpperCase()+t.slice(1);
 function vieneHTML(){
   const ms=[1,2,3].map(i=>moverMes(S.mes,i)),v=ms.map(m=>sum(pend().filter(i=>i.mes===m))),mx=Math.max.apply(null,v),tot=v.reduce((a,b)=>a+b,0);
-  return "<h2>Lo que viene</h2>"+(tot?ms.map((m,k)=>'<div class="linea"><b>'+esc(cap(mesLargo(m)))+'</b><span class="num">'+(v[k]?fmt(v[k]):'<small>Sin cobros</small>')+"</span>"+barra(v[k],mx,"l")+"</div>").join("")+'<p class="muted num" style="margin:10px 0 0">Esperas '+fmt(tot)+" en los próximos tres meses. Es dinero por cobrar, todavía no lo tienes."+(pend().some(i=>esUSD(i)&&ms.includes(i.mes))?" Incluye dólares estimados a "+fmt(tc())+".":"")+"</p>":vacio('No tienes cobros esperados en los próximos tres meses. Regístralos en Ingresos como "Por cobrar".'));
+  return "<h2>Lo que viene</h2>"+(tot?ms.map((m,k)=>'<div class="linea"><b>'+esc(cap(mesLargo(m)))+'</b><span class="num">'+(v[k]?fmt(v[k]):'<small>Sin cobros</small>')+"</span>"+barra(v[k],mx,"l")+"</div>").join("")+'<p class="muted num" style="margin:10px 0 0">Esperas '+fmt(tot)+" en los próximos tres meses. Es dinero por cobrar, todavía no lo tienes."+(pend().some(i=>esUSD(i)&&ms.includes(i.mes))?" Incluye dólares o euros estimados con tu tipo de cambio.":"")+"</p>":vacio('No tienes cobros esperados en los próximos tres meses. Regístralos en Ingresos como "Por cobrar".'));
 }
 let dlPrev="";
 function dlLugares(){const h=Array.from(new Set(lugares().map(l=>l.nombre).concat(S.gastos.map(g=>g.lugar)).filter(Boolean))).sort((a,b)=>a.localeCompare(b,"es")).map(n=>'<option value="'+esc(n)+'"></option>').join("");if(h!==dlPrev){dlPrev=h;$("dl-lugares").innerHTML=h}}
+const norm=t=>String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();
+const baseC=x=>(String(x.lugar||x.nota||x.categoria||"").split(/\s+[—–-]\s+/)[0].trim())||"Sin concepto";
+function grupos(l){const o={};l.forEach(x=>{const b=baseC(x),k=norm(b);const g=o[k]=o[k]||{k,nom:{},items:[],v:0};g.nom[b]=(g.nom[b]||0)+1;g.items.push(x);g.v+=+x.monto||0});
+  return Object.keys(o).map(k=>{const g=o[k];g.n=Object.keys(g.nom).sort((a,b)=>g.nom[b]-g.nom[a])[0];return g}).sort((a,b)=>b.v-a.v)}
+function grpHTML(l,titulo,abierto,accion,filaFn){
+  const gs=grupos(l),t=sum(l),mx=gs.length?gs[0].v:0;
+  return '<div class="drill"><div class="drill-h"><h3>'+esc(titulo)+'</h3><span class="num"><b>'+fmt(t)+'</b> <small class="muted">'+l.length+(l.length===1?" gasto":" gastos")+" · "+gs.length+(gs.length===1?" concepto":" conceptos")+"</small></span></div>"+
+    gs.map(g=>{const op=abierto===g.k;return '<button type="button" class="linea grp" data-a="'+accion+'" data-k="'+esc(g.k)+'" aria-expanded="'+op+'"><b>'+esc(g.n)+(g.items.length>1?' <small class="muted">× '+g.items.length+"</small>":"")+'</b><span class="num"><b>'+fmt(g.v)+"</b> <small>"+pct(g.v,t)+"%</small></span>"+barra(g.v,mx)+"</button>"+(op?'<div class="grp-items">'+g.items.map(filaFn).join("")+"</div>":"")}).join("")+
+    '<p class="muted" style="margin:8px 0 0">Toca un concepto para ver cada gasto.</p></div>';
+}
+function filaFecha(x){const s=[x.categoria,x.tipo,x.metodo,x.lugar&&x.nota?x.nota:""].filter(Boolean).join(" · ");
+  return '<button type="button" class="row" data-a="editG" data-id="'+esc(x.id)+'"><span class="t">'+esc(fCorta(x.fecha)+" · "+(x.lugar||x.nota||x.categoria))+'</span><span class="m">'+fmt(x.monto)+'</span><span class="s">'+esc(s)+"</span></button>"}
 function limsSuave(g){
   const L=limites(),ks=Object.keys(L);if(!ks.length)return "";
   return '<div class="suave">Límites del mes'+ks.map(c=>{const v=sum(g.filter(x=>x.categoria===c)),l=L[c];return "<div><span>"+esc(c)+(v>l?" · "+fmt0(v-l)+" arriba del límite":"")+'</span><span class="num">'+fmt0(v)+" de "+fmt0(l)+"</span>"+barra(v,l)+"</div>"}).join("")+"</div>";
@@ -633,7 +657,7 @@ $("g-lugar").addEventListener("change",()=>{const v=$("g-lugar").value.trim().to
 const proyNombre=id=>{const p=S.proys.find(x=>x.id===id);return p?p.nombre:""};
 function filaI(i,pend){
   const atras=pend&&i.fecha<hoy();
-  return '<div class="row"><button type="button" class="row" style="border:0;padding:0;grid-column:1" data-a="editI" data-id="'+esc(i.id)+'"><span class="t">'+esc(i.cliente||"Sin cliente")+'</span><span class="m ok">'+(pend&&esUSD(i)?"≈ ":"")+fmt(i.monto)+'</span><span class="s">'+esc([esUSD(i)?fUSD(i.usd):"",i.concepto,(pend?"Se espera el ":"")+fCorta(i.fecha),pend?"":i.metodo,proyNombre(i.proyecto)].filter(Boolean).join(" · "))+(atras?' <span class="pill r">Atrasado</span>':"")+"</span></button>"+(pend?'<button type="button" class="btn chico" data-a="cobrarI" data-id="'+esc(i.id)+'">Cobrado</button>':"")+"</div>";
+  return '<div class="row"><button type="button" class="row" style="border:0;padding:0;grid-column:1" data-a="editI" data-id="'+esc(i.id)+'"><span class="t">'+esc(i.cliente||"Sin cliente")+'</span><span class="m ok">'+(pend&&esUSD(i)?"≈ ":"")+fmt(i.monto)+'</span><span class="s">'+esc([esUSD(i)?fExt(i):"",i.concepto,(pend?"Se espera el ":"")+fCorta(i.fecha),pend?"":i.metodo,proyNombre(i.proyecto)].filter(Boolean).join(" · "))+(atras?' <span class="pill r">Atrasado</span>':"")+"</span></button>"+(pend?'<button type="button" class="btn chico" data-a="cobrarI" data-id="'+esc(i.id)+'">Cobrado</button>':"")+"</div>";
 }
 R.ingresos=()=>{
   $("dl-clientes").innerHTML=Array.from(new Set(S.ingresos.map(i=>i.cliente).concat(S.proys.map(p=>p.cliente)).filter(Boolean))).map(c=>'<option value="'+esc(c)+'"></option>').join("");
@@ -647,16 +671,16 @@ R.ingresos=()=>{
   $("i-cobt").textContent="Cobrado "+pEn();
   $("i-cob").innerHTML=cob.length?cob.map(i=>filaI(i)).join(""):vacio("Sin ingresos cobrados en este periodo.");
 };
-function updUSD(){const u=radio("i-mon")==="USD",c=radio("i-est")==="cobrado",m=num($("i-monto").value);$("i-sim").textContent=u?"US$":"$";$("i-mxnbox").hidden=!(u&&c);const e=$("i-estim");e.hidden=!(u&&!c);if(!e.hidden)e.textContent=(m>0?"≈ "+fmt(m*tc())+" · ":"")+"Estimado con el dólar a "+fmt(tc())+". Puedes cambiarlo en Ajustes."}
+function updUSD(){const mo=radio("i-mon"),u=!!MON[mo],c=radio("i-est")==="cobrado",m=num($("i-monto").value);$("i-sim").textContent=u?MON[mo].sim:"$";$("i-mxnbox").hidden=!(u&&c);const e=$("i-estim");e.hidden=!(u&&!c);if(!e.hidden)e.textContent=(m>0?"≈ "+fmt(m*tcDe(mo))+" · ":"")+"Estimado con el "+MON[mo].nom+" a "+fmt(tcDe(mo))+". Puedes cambiarlo en Ajustes."}
 function limpiarI(){S.edit.ingreso=null;setRadio("i-mon","MXN");["i-monto","i-cliente","i-concepto","i-mxn"].forEach(i=>{$(i).value=""});$("i-fecha").value=hoy();$("i-proy").value="";setRadio("i-est","cobrado");$("i-titulo").textContent="Nuevo ingreso";$("i-guardar").textContent="Guardar ingreso";$("i-cancelar").hidden=$("i-borrar").hidden=true;reset($("i-borrar"))}
 function cargarI(i,nuevo){S.edit.ingreso=nuevo?null:i.id;S.vista="ingresos";render();
-  setRadio("i-mon",esUSD(i)?"USD":"MXN");$("i-monto").value=esUSD(i)?i.usd:i.monto;$("i-mxn").value=esUSD(i)&&i.estado==="cobrado"?i.monto:"";$("i-cliente").value=i.cliente||"";$("i-concepto").value=i.concepto||"";$("i-fecha").value=i.fecha;setRadio("i-est",i.estado);fill($("i-met"),metodos(),i.metodo||"Transferencia");$("i-proy").value=i.proyecto||"";
+  setRadio("i-mon",esUSD(i)?i.moneda:"MXN");$("i-monto").value=esUSD(i)?ext(i):i.monto;$("i-mxn").value=esUSD(i)&&i.estado==="cobrado"?i.monto:"";$("i-cliente").value=i.cliente||"";$("i-concepto").value=i.concepto||"";$("i-fecha").value=i.fecha;setRadio("i-est",i.estado);fill($("i-met"),metodos(),i.metodo||"Transferencia");$("i-proy").value=i.proyecto||"";
   if(!nuevo){$("i-titulo").textContent="Editar ingreso";$("i-guardar").textContent="Guardar cambios";$("i-cancelar").hidden=$("i-borrar").hidden=false}
   render();window.scrollTo(0,0)}
 $("iForm").addEventListener("submit",e=>{e.preventDefault();
   const d={monto:num($("i-monto").value),cliente:$("i-cliente").value.trim(),concepto:$("i-concepto").value.trim(),estado:radio("i-est"),fecha:$("i-fecha").value,metodo:$("i-met").value,proyecto:$("i-proy").value};
   if(!(d.monto>0))return toast("Escribe un monto mayor a cero.");
-  if(radio("i-mon")==="USD"){d.moneda="USD";d.usd=d.monto;if(d.estado==="cobrado"){const r=num($("i-mxn").value);if(!(r>0))return toast("Escribe cuántos pesos recibiste.");d.monto=r}else d.monto=Math.round(d.usd*tc()*100)/100}
+  const mo=radio("i-mon");if(MON[mo]){d.moneda=mo;d.ext=d.monto;if(mo==="USD")d.usd=d.monto;if(d.estado==="cobrado"){const r=num($("i-mxn").value);if(!(r>0))return toast("Escribe cuántos pesos recibiste.");d.monto=r}else d.monto=Math.round(d.ext*tcDe(mo)*100)/100}
   if(!d.cliente)return toast("Escribe quién te paga.");
   if(!/^\d{4}-\d{2}-\d{2}$/.test(d.fecha))return toast("Elige la fecha.");
   d.mes=d.fecha.slice(0,7);const prev=S.ingresos.find(x=>x.id===S.edit.ingreso);d.creado=prev?prev.creado||Date.now():Date.now();
@@ -665,7 +689,7 @@ $("iForm").addEventListener("submit",e=>{e.preventDefault();
 });
 document.querySelectorAll('input[name="i-est"],input[name="i-mon"]').forEach(r=>r.addEventListener("change",render));
 $("i-monto").addEventListener("input",updUSD);
-$("tcForm").addEventListener("submit",e=>{e.preventDefault();const v=num($("a-tc").value);if(!(v>0))return toast("Escribe cuántos pesos vale un dólar.");guardarPerfil({tc:v},"Tipo de cambio guardado")});
+$("tcForm").addEventListener("submit",e=>{e.preventDefault();const v=num($("a-tc").value),w=num($("a-tce").value);if(!(v>0))return toast("Escribe cuántos pesos vale un dólar.");if(!(w>0))return toast("Escribe cuántos pesos vale un euro.");guardarPerfil({tc:v,tcEur:w},"Tipo de cambio guardado")});
 
 /* ---------- calendario ---------- */
 const eventos=()=>S.evM.concat(S.evC);
@@ -737,17 +761,17 @@ R.reporte=()=>{
   }
   $("r-ins").innerHTML=ins.map(x=>'<li class="'+x[0]+'">'+esc(x[1])+"</li>").join("");
   const top=porCat.slice(0,7),resto=porCat.slice(7);if(resto.length)top.push({k:"Otras categorías",v:sum(resto,"v"),otras:true});
-  $("r-dona").innerHTML=porCat.length?'<div class="dona">'+dona(top,t)+'<div class="ley">'+top.map((x,i)=>'<button type="button" data-a="drill" data-c="'+esc(x.otras?"":x.k)+'"'+(x.otras?" disabled":"")+'><i style="background:'+PAL[Math.min(i,PAL.length-1)]+'"></i><span>'+esc(x.k)+'</span><span class="num"><b>'+fmt(x.v)+"</b> <small class=\"muted\">"+pct(x.v,t)+"%</small></span></button>").join("")+"</div></div>"+(resto.length?'<p class="muted" style="margin:10px 0 0">Otras: '+esc(resto.map(x=>x.k+" "+fmt(x.v)).join(" · "))+"</p>":"")+'<p class="muted" style="margin:8px 0 0">Toca una categoría para ver sus gastos.</p>':vacio("Sin gastos en este periodo.");
-  const dr=S.drill&&g.filter(x=>x.categoria===S.drill);
-  $("r-drill").innerHTML=dr&&dr.length?"<h3>"+esc(S.drill)+" · "+fmt(sum(dr))+"</h3>"+dr.map(x=>filaG(x)).join(""):"";
+  $("r-dona").innerHTML=porCat.length?'<div class="dona">'+dona(top,t)+'<div class="ley">'+top.map((x,i)=>'<button type="button" data-a="drill" data-campo="categoria" data-c="'+esc(x.otras?"":x.k)+'"'+(x.otras?" disabled":' aria-pressed="'+(!!S.drill&&S.drill.c==="categoria"&&S.drill.v===x.k)+'"')+'><i style="background:'+PAL[Math.min(i,PAL.length-1)]+'"></i><span>'+esc(x.k)+'</span><span class="num"><b>'+fmt(x.v)+"</b> <small class=\"muted\">"+pct(x.v,t)+"%</small></span></button>").join("")+"</div></div>"+(resto.length?'<div class="acciones" style="margin-top:10px"><span class="muted">Otras:</span>'+resto.map(x=>'<button type="button" class="btn sec chico" data-a="drill" data-campo="categoria" data-c="'+esc(x.k)+'">'+esc(x.k)+" "+fmt0(x.v)+"</button>").join("")+"</div>":"")+'<p class="muted" style="margin:8px 0 0">Toca una categoría para ver sus totales por concepto.</p>':vacio("Sin gastos en este periodo.");
+  const D=S.drill,dl=D?g.filter(x=>String(x[D.c])===D.v):[],dh=dl.length?grpHTML(dl,D.v==="undefined"?"Sin especificar":D.v,S.grp,"grp",filaFecha):"";
+  $("r-drill").innerHTML=D&&D.c==="categoria"?dh:"";
   $("r-lims").innerHTML=(S.rango?'<p class="muted" style="margin-top:0">Los límites son mensuales: se muestran con todo '+esc(mesLargo(S.mes))+".</p>":"")+limsHTML(gmes());
   const meses=[];for(let i=5;i>=0;i--)meses.push(moverMes(S.mes,-i));
   const serie=meses.map(m=>({m,i:sum(cobradosMes(m)),g:sum(S.gastos.filter(x=>x.mes===m))})),mx=Math.max.apply(null,serie.map(x=>Math.max(x.i,x.g)));
   $("r-trend").innerHTML=mx>0?'<div class="trend" role="img" aria-label="Ingresos y gastos por mes">'+serie.map(x=>'<div class="m" title="'+esc(mesLargo(x.m))+": ingresos "+fmt(x.i)+", gastos "+fmt(x.g)+'"><i style="height:'+(x.i/mx*100).toFixed(1)+'%"></i><i class="g" style="height:'+(x.g/mx*100).toFixed(1)+'%"></i></div>').join("")+'</div><div class="trendl">'+serie.map(x=>"<span>"+esc(mesCorto(x.m))+"</span>").join("")+'</div><p class="muted" style="margin:10px 0 0"><span class="pill">Ingresos</span> <span class="pill r">Gastos</span> · El más alto: '+fmt(mx)+"</p>":vacio("Aún no hay datos para comparar.");
   const dias=fs.map(f=>sum(g.filter(x=>x.fecha===f))),dmax=Math.max.apply(null,dias.concat([0])),hf=hoy();
   $("r-dias").innerHTML=dmax>0?'<div class="label num" style="margin-bottom:6px">Día más alto: '+fmt(dmax)+'</div><div class="dias" role="img" aria-label="Gasto de cada día">'+dias.map((v,k)=>'<div class="'+(fs[k]===hf?"hoy":"")+'" style="height:'+(v/dmax*100).toFixed(1)+'%" title="'+esc(fCorta(fs[k]))+": "+fmt(v)+'"></div>').join("")+'</div><div class="ejes num"><span>'+esc(fCorta(fs[0]))+"</span><span>"+esc(fCorta(fs[n-1]))+"</span></div>":vacio("Sin gastos en este periodo.");
-  const lin=a=>a.length?a.map(x=>'<div class="linea"><b>'+esc(x.k||"Sin especificar")+'</b><span class="num"><b>'+fmt(x.v)+"</b> <small>"+pct(x.v,t)+"%</small></span>"+barra(x.v,a[0].v)+"</div>").join(""):vacio("Sin gastos en este periodo.");
-  $("r-tipos").innerHTML=lin(agrupar(g,"tipo"));$("r-mets").innerHTML=lin(agrupar(g,"metodo"));
+  const lin=(a,c)=>a.length?a.map(x=>'<button type="button" class="linea" data-a="drill" data-campo="'+c+'" data-c="'+esc(x.k)+'" aria-pressed="'+(!!D&&D.c===c&&D.v===String(x.k))+'"><b>'+esc(x.k&&x.k!=="undefined"?x.k:"Sin especificar")+'</b><span class="num"><b>'+fmt(x.v)+"</b> <small>"+pct(x.v,t)+"%</small></span>"+barra(x.v,a[0].v)+"</button>").join("")+'<p class="muted" style="margin:8px 0 0">Toca uno para ver sus totales por concepto.</p>':vacio("Sin gastos en este periodo.");
+  $("r-tipos").innerHTML=lin(agrupar(g,"tipo"),"tipo")+(D&&D.c==="tipo"?dh:"");$("r-mets").innerHTML=lin(agrupar(g,"metodo"),"metodo")+(D&&D.c==="metodo"?dh:"");
   const gM=gmes(),mi=S.res.find(r=>r.uid===uid),cambio=mi&&(mi.n!==gM.length||Math.abs(mi.total-sum(gM))>0.005);
   $("r-comp").textContent=mi?(cambio?"Tu resumen compartido de "+mesLargo(S.mes)+" ya no coincide con tus gastos. Actualízalo para que se vea al día.":"Tu resumen de "+mesLargo(S.mes)+" está compartido. Se ve en la pestaña Juntos."):"Tus gastos son privados. Al compartir, tu pareja verá los totales por categoría y los gastos de "+mesLargo(S.mes)+". Tus ingresos no se comparten.";
   $("r-compb").textContent=mi?"Actualizar mi resumen":"Compartir mi resumen";$("r-descb").hidden=!mi;$("r-compb").disabled=!gM.length;
@@ -765,7 +789,7 @@ function juntos(){
   const tabla=(k,titulo,clic)=>{const ks=agrupar(todos,k);return '<div class="panel"><h2>'+titulo+'</h2><div class="tabla"><table><thead><tr><th></th>'+rs.map(r=>"<th>"+esc(r.nombre||"Alguien")+"</th>").join("")+"<th>Total</th></tr></thead><tbody>"+ks.map(c=>"<tr"+(clic?' class="clic" data-a="drillJ" data-c="'+esc(c.k)+'"':"")+"><td>"+esc(c.k||"Sin especificar")+"</td>"+rs.map(r=>'<td class="num">'+fmt(sum(todos.filter(x=>x.uid===r.uid&&x[k]===c.k)))+"</td>").join("")+'<td class="num"><b>'+fmt(c.v)+"</b></td></tr>").join("")+"</tbody></table></div>"+(clic?'<p class="muted" style="margin:8px 0 0">Toca una categoría para ver sus gastos.</p>':"")+"</div>"};
   h+='<div class="grid2"><div class="stack">'+tabla("categoria","Por categoría",true)+'</div><div class="stack">'+tabla("tipo","Casa, personal y trabajo");
   const dr=S.drillJ&&todos.filter(x=>x.categoria===S.drillJ).sort((a,b)=>a.fecha<b.fecha?1:-1);
-  if(dr&&dr.length)h+='<div class="panel"><h2>'+esc(S.drillJ)+" · "+fmt(sum(dr))+"</h2>"+dr.map(x=>'<div class="row"><span class="t">'+esc(x.lugar||x.nota||x.categoria)+'</span><span class="m">'+fmt(x.monto)+'</span><span class="s">'+esc([fCorta(x.fecha),x.quien,x.tipo,x.metodo].filter(Boolean).join(" · "))+"</span></div>").join("")+"</div>";
+  if(dr&&dr.length)h+='<div class="panel">'+grpHTML(dr,S.drillJ,S.grpJ,"grpJ",x=>'<div class="row"><span class="t">'+esc(fCorta(x.fecha)+" · "+(x.lugar||x.nota||x.categoria))+'</span><span class="m">'+fmt(x.monto)+'</span><span class="s">'+esc([x.quien,x.tipo,x.metodo].filter(Boolean).join(" · "))+"</span></div>").replace('class="drill"','class="drill" style="margin-top:0;padding-top:0;border-top:0"')+"</div>";
   $("r-juntos").innerHTML=h+"</div></div>";
 }
 function excel(){
@@ -778,7 +802,7 @@ function excel(){
   const wb=XLSX.utils.book_new(),hoja=(n,f,w)=>{const ws=XLSX.utils.aoa_to_sheet(f);ws["!cols"]=w.map(x=>({wch:x}));XLSX.utils.book_append_sheet(wb,ws,n)};
   hoja("Resumen",res,[28,16,14]);
   hoja("Gastos",[["Fecha","Gasto de","Categoría","Lugar o concepto","Nota","Forma de pago","Monto"]].concat(g.map(x=>[x.fecha,x.tipo,x.categoria,x.lugar,x.nota,x.metodo,x.monto]),[[],["","","","","","Total",t]]),[12,12,22,30,26,18,12]);
-  hoja("Ingresos",[["Fecha","Cliente","Concepto","Forma de pago","Proyecto","Dólares","Monto en pesos"]].concat(ing.map(x=>[x.fecha,x.cliente,x.concepto,x.metodo,proyNombre(x.proyecto),esUSD(x)?x.usd:"",x.monto]),[[],["","","","","","Total",ti]]),[12,24,30,18,24,12,16]);
+  hoja("Ingresos",[["Fecha","Cliente","Concepto","Forma de pago","Proyecto","Moneda","Monto original","Monto en pesos"]].concat(ing.map(x=>[x.fecha,x.cliente,x.concepto,x.metodo,proyNombre(x.proyecto),esUSD(x)?x.moneda:"MXN",esUSD(x)?ext(x):x.monto,x.monto]),[[],["","","","","","","Total",ti]]),[12,24,30,18,24,9,14,16]);
   try{XLSX.writeFile(wb,S.rango?"gastos-"+S.rango.de+"-a-"+S.rango.a+".xlsx":"mi-mes-"+S.mes+".xlsx");toast("Reporte generado")}catch(e){toast("No se pudo generar el reporte.")}
 }
 
@@ -869,8 +893,10 @@ const A={
   cancelE:()=>limpiarE(),
   delE:b=>{if(!confirma(b,"Sí, eliminar"))return;const ed=S.edit.evento;escribir((ed.comp?db.collection("eventos"):col("eventos")).doc(ed.id).delete(),"Eliminado",limpiarE)},
   iDias:b=>{const d=new Date();d.setDate(d.getDate()+(+b.dataset.n));$("i-fecha").value=iso(d)},
-  drill:b=>{S.drill=S.drill===b.dataset.c?null:b.dataset.c;render()},
-  drillJ:b=>{S.drillJ=S.drillJ===b.dataset.c?null:b.dataset.c;render()},
+  drill:b=>{const c=b.dataset.campo||"categoria",v=b.dataset.c;S.drill=S.drill&&S.drill.c===c&&S.drill.v===v?null:{c,v};S.grp=null;render()},
+  drillJ:b=>{S.drillJ=S.drillJ===b.dataset.c?null:b.dataset.c;S.grpJ=null;render()},
+  grp:b=>{S.grp=S.grp===b.dataset.k?null:b.dataset.k;render()},
+  grpJ:b=>{S.grpJ=S.grpJ===b.dataset.k?null:b.dataset.k;render()},
   compartir:()=>escribir(db.doc("resumenes/"+S.mes+"_"+uid).set(miResumen()),"Resumen compartido"),
   descompartir:()=>escribir(db.doc("resumenes/"+S.mes+"_"+uid).delete(),"Dejaste de compartir este mes"),
   excel,
